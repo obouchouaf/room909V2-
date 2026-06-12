@@ -53,7 +53,7 @@ const FRAG = /* glsl */ `
     p *= 1.4;
 
     float t = uReduced > 0.5 ? 20.0 : uTime;
-    float drift = t * 0.06;
+    float drift = t * 0.018;   // slow, smoky drift
 
     float n  = fbm(p * 2.2 + vec2(drift, -drift * 0.7) + fbm(p * 3.0 - drift) * 0.6);
     float n2 = fbm(p * 5.0 + vec2(-drift * 0.5, drift * 0.3));
@@ -69,7 +69,7 @@ const FRAG = /* glsl */ `
     col = mix(col, cream, smoothstep(0.80, 0.97, n * n2 * 1.6));
 
     // haze beams raking the room
-    float beam = smoothstep(0.6, 1.0, sin(p.x * 3.0 + t * 0.15) * 0.5 + 0.5)
+    float beam = smoothstep(0.6, 1.0, sin(p.x * 3.0 + t * 0.05) * 0.5 + 0.5)
                * smoothstep(1.2, 0.2, p.y + 1.0);
     col += cream * beam * 0.04;
 

@@ -22,10 +22,26 @@ export class Clock909 {
     this.env = 0; // 1 -> 0 decay within the current step
     this._elapsed = 0;
     this._onStep = null; // callback(stepIndex)
+
+    // optional audio time source: when playing, the grid locks to the
+    // track's currentTime instead of free-running on rAF deltas, so the
+    // pulsing boxes stay in sync with the music.
+    this._getTime = null;
+    this._isActive = null;
   }
 
   onStep(fn) {
     this._onStep = fn;
+    return this;
+  }
+
+  /**
+   * Bind an external clock (e.g. an <audio> element). `getTime()` returns
+   * seconds, `isActive()` returns whether it should drive the grid.
+   */
+  useTimeSource(getTime, isActive) {
+    this._getTime = getTime;
+    this._isActive = isActive;
     return this;
   }
 
@@ -38,7 +54,13 @@ export class Clock909 {
       return;
     }
 
-    this._elapsed += dt;
+    if (this._getTime && this._isActive && this._isActive()) {
+      // locked to the music's transport
+      this._elapsed = this._getTime();
+    } else {
+      this._elapsed += dt;
+    }
+
     const totalSteps = Math.floor(this._elapsed / this.stepDur);
     const next = ((totalSteps % this.steps) + this.steps) % this.steps;
 

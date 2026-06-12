@@ -9,11 +9,12 @@ const CONTENT = {
   [STATES.NEXT_EVENT]: {
     eyebrow: 'Next Event',
     title: 'Volume 909',
-    lede: 'One night. One room. The machine runs until sunrise.',
+    lede: 'One night. One room. A serious sound system. The machine runs until sunrise.',
     meta: [
       ['Date', 'Sat 12 Sep 2026 · 23:00'],
       ['Location', 'Undisclosed Riad · Medina, Marrakech'],
-      ['Format', 'Analog only · 909 in the room']
+      ['Sound', 'Custom Stack · Tuned For The Room'],
+      ['Format', 'Analog Only · 909 In The Room']
     ],
     cta: 'Request Address'
   },
@@ -30,16 +31,16 @@ const CONTENT = {
       ['Vol. 003', 'Courtyard 9 · Jul 2025']
     ]
   },
-  [STATES.RESIDENTS]: {
-    eyebrow: 'Residents',
-    title: 'The Room',
-    lede: 'Four hands on the machine.',
+  [STATES.LINEUP]: {
+    eyebrow: 'Lineup',
+    title: 'The Lineup',
+    lede: 'Who plays the room.',
     roster: [
-      ['AÏCHA', 'Resident · Hardware Live'],
-      ['NOUR', 'Resident · Deep Techno'],
-      ['SAID K.', 'Resident · Acid / 303'],
-      ['THE CARETAKER', 'Host · Selector'],
-      ['GUEST 909', 'Rotating · Invitation Only']
+      ['AÏCHA', '00:00 · Hardware Live'],
+      ['NOUR', '01:30 · Deep Techno'],
+      ['SAID K.', '03:00 · Acid / 303'],
+      ['THE CARETAKER', '04:30 · Selector'],
+      ['GUEST 909', '05:30 · Invitation Only']
     ]
   },
   [STATES.ALBUM]: {

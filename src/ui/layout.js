@@ -3,24 +3,35 @@ import { buildSections } from './sections.js';
 
 /**
  * Builds the fixed UI chrome and wires it to the Director:
- *   - top-right pill nav (EVENTS / CONTACT)
- *   - left menu (NEXT EVENT / PAST NIGHTS / RESIDENTS / THE ALBUM)
+ *   - top-right pill nav (EVENTS / CONTACT / SOUND)
+ *   - left menu (NEXT EVENT / PAST NIGHTS / LINEUP / THE ALBUM)
  *   - bottom-left wordmark
  *   - bottom-right 16-step sequencer (cells returned for the clock)
  *   - close/back control
+ *   - the ENTER intro gate (unlocks audio + gyro)
  *   - the section panels (via buildSections)
  *
  * Everything is real, focusable DOM. Navigation flips Director state; the
  * App reacts to state changes for the canvas transition.
  */
-export function buildLayout(root, director, { onGyro } = {}) {
+export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   // ---- top-right pill nav ----
   const nav = document.createElement('nav');
   nav.className = 'pill';
   nav.setAttribute('aria-label', 'Primary');
   const navEvents = button('Events', () => director.go(STATES.PAST_NIGHTS));
   const navContact = button('Contact', () => director.go(STATES.CONTACT));
-  nav.append(navEvents, sep(), navContact);
+
+  // sound toggle — reflects mute state
+  const sound = button('Sound ●', () => {
+    if (!audio) return;
+    const muted = audio.toggleMute();
+    sound.textContent = muted ? 'Sound ○' : 'Sound ●';
+    sound.setAttribute('aria-pressed', String(!muted));
+  });
+  sound.setAttribute('aria-label', 'Toggle sound');
+
+  nav.append(navEvents, sep(), navContact, sep(), sound);
 
   // ---- left menu ----
   const menu = document.createElement('div');
@@ -34,7 +45,7 @@ export function buildLayout(root, director, { onGyro } = {}) {
   const links = [
     ['Next Event', STATES.NEXT_EVENT],
     ['Past Nights', STATES.PAST_NIGHTS],
-    ['Residents', STATES.RESIDENTS],
+    ['Lineup', STATES.LINEUP],
     ['The Album', STATES.ALBUM]
   ];
   const menuButtons = new Map();
@@ -44,11 +55,11 @@ export function buildLayout(root, director, { onGyro } = {}) {
     menu.appendChild(b);
   }
 
-  // ---- wordmark ----
+  // ---- wordmark (bottom-left, ROOM 909 reads clearly) ----
   const mark = document.createElement('div');
   mark.className = 'mark';
   mark.innerHTML =
-    '<b>ROOM 909</b><br>MARRAKECH · 31.62°N 7.99°W<br>RHYTHM COMPOSER';
+    '<b>ROOM 909</b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span><span class="sub">RHYTHM COMPOSER</span>';
 
   // ---- step sequencer ----
   const seq = document.createElement('div');
@@ -73,16 +84,34 @@ export function buildLayout(root, director, { onGyro } = {}) {
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, menu, mark, seq, close);
+  // ---- ENTER intro ----
+  // Covers the scene until the visitor clicks in. The click is the user
+  // gesture that unlocks audio + gyroscope. The grid runs dimly behind it.
+  const intro = document.createElement('div');
+  intro.className = 'intro';
+  intro.innerHTML =
+    '<div class="intro-mark">ROOM 909</div>' +
+    '<div class="intro-sub">MARRAKECH · RHYTHM COMPOSER</div>' +
+    '<button type="button" class="enter" aria-label="Enter Room 909">ENTER</button>';
+  const enterBtn = intro.querySelector('.enter');
 
-  // gyroscope opt-in on first interaction (mobile)
-  if (onGyro) {
-    const once = () => {
-      onGyro();
-      window.removeEventListener('pointerdown', once);
-    };
-    window.addEventListener('pointerdown', once);
-  }
+  let entered = false;
+  const doEnter = () => {
+    if (entered) return;
+    entered = true;
+    intro.classList.add('gone');
+    if (onGyro) onGyro();
+    if (onEnter) onEnter();
+    // reflect playing state on the sound control
+    if (audio) sound.textContent = audio.muted ? 'Sound ○' : 'Sound ●';
+    window.setTimeout(() => intro.remove(), 900);
+  };
+  enterBtn.addEventListener('click', doEnter);
+
+  root.append(nav, menu, mark, seq, close, intro);
+
+  // focus the ENTER button so keyboard users can press Enter/Space
+  requestAnimationFrame(() => enterBtn.focus());
 
   // ---- react to state ----
   function syncState(state) {

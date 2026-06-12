@@ -22,9 +22,12 @@ src/
   main.js               bootstrap
   App.js                renderer + single render loop, wiring, resize
   core/
-    Clock909.js         16-step / 128 BPM clock — one source of truth
+    Clock909.js         16-step / 128 BPM clock — one source of truth,
+                        locks to the music's transport while it plays
     Director.js         state machine: HERO · NEXT_EVENT · PAST_NIGHTS ·
-                        RESIDENTS · ALBUM · CONTACT
+                        LINEUP · ALBUM · CONTACT
+    Audio909.js         background music (public/room909.mp3), beat-synced
+    SwipeNav.js         wheel / vertical swipe moves between sections
     PointerRig.js       cursor → world point + parallax (gyro optional)
   scene/
     TileGrid.js         InstancedMesh + custom shaders (the centerpiece)
@@ -32,9 +35,11 @@ src/
     CameraRig.js        perspective camera + ~3° parallax
     post/Composer.js    bloom (ember only) + film grain + vignette
   ui/
-    layout.js           nav, menu, wordmark, sequencer, close
+    layout.js           nav, menu, wordmark, sequencer, intro, close
     sections.js         section panels + content
     styles.css          locked brand system
+public/
+  room909.mp3           the soundtrack (looped, starts on ENTER)
 ```
 
 ### The grid
@@ -62,6 +67,27 @@ window.__room909.grid.setMap(new THREE.VideoTexture(video));
 
 - Palette: charcoal `#141210`, cream `#EFE9DC`, ember `#FF5C00`, rust `#732103`. Nothing else.
 - Type: Share Tech Mono only — small, uppercase, wide tracking.
+
+## Music
+
+The site opens behind an ENTER gate; clicking in starts `public/room909.mp3`
+(looped) — the user gesture that satisfies browser autoplay rules. While the
+track plays, the sequencer clock reads the audio's `currentTime` instead of
+free-running, so the pulsing boxes stay locked to the beat (the track and the
+grid are both 128 BPM). To swap the track:
+
+```js
+window.__room909.audio.setSource('/other-track.mp3');
+```
+
+SOUND ●/○ in the pill nav mutes without stopping the transport, so sync
+never breaks.
+
+## Navigation
+
+- Left menu, pill nav, or wheel-scroll / vertical swipe to move through
+  HERO → NEXT EVENT → PAST NIGHTS → LINEUP → THE ALBUM → CONTACT.
+- `Esc` or BACK returns to the hero.
 
 ## Quality
 

@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { Clock909 } from './core/Clock909.js';
 import { Director } from './core/Director.js';
 import { PointerRig } from './core/PointerRig.js';
+import { Audio909 } from './core/Audio909.js';
+import { SwipeNav } from './core/SwipeNav.js';
 
 import { FootageTexture } from './scene/FootageTexture.js';
 import { TileGrid } from './scene/TileGrid.js';
@@ -62,9 +64,25 @@ export class App {
     this.director = new Director();
     this.pointer = new PointerRig(this.cameraRig.camera, { reduced: this.reduced });
 
+    // ---- audio (synced to the clock) ----
+    this.audio = new Audio909({ src: '/room909.mp3' });
+    // while the track plays, the boxes pulse off its transport
+    this.clock.useTimeSource(
+      () => this.audio.currentTime,
+      () => this.audio.playing
+    );
+
+    // ---- swipe / scroll between sections ----
+    this.swipe = new SwipeNav(this.director);
+
     // ---- UI ----
     const { cells } = buildLayout(ui, this.director, {
-      onGyro: () => this.pointer.requestGyro()
+      onGyro: () => this.pointer.requestGyro(),
+      audio: this.audio,
+      onEnter: () => {
+        this.audio.start();
+        this.swipe.enable();
+      }
     });
     this.cells = cells;
 

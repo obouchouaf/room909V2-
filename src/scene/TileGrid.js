@@ -50,6 +50,7 @@ const VERT = /* glsl */ `
   }
   mat3 rotX(float a){ float c = cos(a), s = sin(a); return mat3(1.0,0.0,0.0, 0.0,c,-s, 0.0,s,c); }
   mat3 rotY(float a){ float c = cos(a), s = sin(a); return mat3(c,0.0,s, 0.0,1.0,0.0, -s,0.0,c); }
+  mat3 rotZ(float a){ float c = cos(a), s = sin(a); return mat3(c,-s,0.0, s,c,0.0, 0.0,0.0,1.0); }
 
   void main(){
     vLocalUV = uv;
@@ -59,8 +60,10 @@ const VERT = /* glsl */ `
     vec3 center = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
     // --- cursor focus -------------------------------------------------
+    // smooth, generous falloff so the cursor's pull on the image is felt
     float dist  = distance(center.xy, uPointer.xy);
     float focus = 1.0 - smoothstep(0.0, uFocusRadius, dist);  // 1 near cursor
+    focus = focus * focus * (3.0 - 2.0 * focus);              // ease it
     focus *= (1.0 - uTransition);                             // no focus mid-section
     vFocus = focus;
 
@@ -68,30 +71,37 @@ const VERT = /* glsl */ `
     vec2 dir = uPointer.xy - center.xy;
     float dl = length(dir);
     dir = dl > 1e-4 ? dir / dl : vec2(0.0);
-    float tilt = focus * 0.7;
+    float tilt = focus * 1.05;
 
     vec3 local = position;
     local = rotX(-dir.y * tilt) * rotY(dir.x * tilt) * local;
 
     // --- depth --------------------------------------------------------
     float t = uReduced > 0.5 ? 0.0 : uTime;
-    float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.12);
+    float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.05);  // slow idle float
     // idle float; collapses toward the plane under focus (image resolves)
-    float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.85);
+    float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.9);
+    // focused tiles also lift toward the camera so the cursor "grabs" them
+    float zFocus = focus * 1.6;
 
     // sequencer column pulse
     float pulse = (1.0 - step(0.5, abs(aColumn - uStep))) * uStepEnv;
     vPulse = pulse;
     float zPush = pulse * uPushAmp;
 
-    // --- transition (fly apart / re-form) -----------------------------
+    // --- transition (scatter into a living cloud, not off-screen) ------
+    // tiles drift apart, spin and settle into a dim backdrop behind the
+    // section text — they never leave the frame.
+    float tr = uTransition;
     vec3 outDir = normalize(aSeed - 0.5 + 1e-4);
-    vec3 explode = outDir * uTransition * uExplodeAmp;
+    vec3 explode = outDir * tr * uExplodeAmp;
+    explode.z -= tr * 2.5;                       // push the cloud back a touch
+    local = rotZ(tr * (aSeed.z - 0.5) * 4.0) * local;   // particle spin
 
     // --- assemble -----------------------------------------------------
     vec4 world = modelMatrix * instanceMatrix * vec4(local, 1.0);
     world.xyz += explode;
-    world.z += zNoise + zPush;
+    world.z += zNoise + zPush + zFocus;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -120,8 +130,9 @@ const FRAG = /* glsl */ `
     float scatter = (1.0 - vFocus) * (0.16 + uTransition * 0.10);
     vec3 col = texture2D(uMap, vCellUV + jitter * scatter).rgb;
 
-    // resolve brightens the focused region a touch
-    col *= 1.0 + vFocus * 0.12;
+    // resolve brightens the focused region and warms it slightly
+    col *= 1.0 + vFocus * 0.22;
+    col += uEmber * vFocus * 0.05;
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -130,6 +141,9 @@ const FRAG = /* glsl */ `
     vec2 e = smoothstep(0.0, 0.045, vLocalUV) * smoothstep(0.0, 0.045, 1.0 - vLocalUV);
     float frame = min(e.x, e.y);
     col *= mix(1.0, mix(0.78, 0.94, vFocus), 1.0 - frame);
+
+    // dim the scattered cloud so section text stays readable over it
+    col *= 1.0 - uTransition * 0.5;
 
     gl_FragColor = vec4(col, 1.0);
   }
@@ -154,7 +168,7 @@ export class TileGrid {
       uStepEnv: { value: 0 },
       uDepthAmp: { value: 1.7 },
       uPushAmp: { value: 0.9 },
-      uExplodeAmp: { value: 9.0 },
+      uExplodeAmp: { value: 3.6 },
       uReduced: { value: reduced ? 1 : 0 },
       uMap: { value: null },
       uEmber: { value: new THREE.Color(0xff5c00) }
@@ -238,7 +252,7 @@ export class TileGrid {
     this._column.needsUpdate = true;
 
     // focus radius scales with the world so the resolve feels consistent
-    this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.28;
+    this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.45;
   }
 
   update(time, pointerWorld, step, env, transition) {
