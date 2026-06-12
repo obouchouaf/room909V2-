@@ -64,11 +64,12 @@ export class App {
     this.director = new Director();
     this.pointer = new PointerRig(this.cameraRig.camera, { reduced: this.reduced });
 
-    // ---- audio (synced to the clock) ----
+    // ---- audio (analyzed + synced to the clock) ----
     this.audio = new Audio909({ src: '/room909.mp3' });
-    // while the track plays, the boxes pulse off its transport
+    // while the track plays, the grid steps off its transport, phase-
+    // aligned to the kicks the analyser actually hears
     this.clock.useTimeSource(
-      () => this.audio.currentTime,
+      () => this.audio.syncedTime,
       () => this.audio.playing
     );
 
@@ -98,6 +99,19 @@ export class App {
     // ---- live transition value, lerped toward the active state ----
     // (the App reads director.transitionTarget every frame)
     this._transition = 0;
+
+    // per-section scatter seed: each section rotates the cloud into its
+    // own arrangement, so section -> section is a visible swirl, not a
+    // content swap. Lerped, so the swirl animates.
+    this._sectionIndex = { NEXT_EVENT: 1, PAST_NIGHTS: 2, LINEUP: 3, ALBUM: 4, CONTACT: 5 };
+    this._sectionSeed = 0;
+    this._sectionSeedTarget = 0;
+    this.director.onChange((state) => {
+      const idx = this._sectionIndex[state];
+      if (idx) this._sectionSeedTarget = idx * 1.45;
+      // returning to HERO keeps the last seed so the re-form unwinds
+      // along the same path it scattered
+    });
 
     this._last = performance.now() / 1000;
     this._onResize = () => this.resize();
@@ -142,12 +156,16 @@ export class App {
 
     const time = this.reduced ? 20 : now;
 
-    // clock → grid + DOM
+    // audio analysis first — the clock reads its synced transport
+    this.audio.tick(dt);
     this.clock.tick(dt);
 
     // transition lerp toward the active state's target
     const target = this.director.transitionTarget;
     this._transition += (target - this._transition) * (this.reduced ? 1 : Math.min(1, dt * 4.5));
+    // section seed swirl
+    this._sectionSeed +=
+      (this._sectionSeedTarget - this._sectionSeed) * (this.reduced ? 1 : Math.min(1, dt * 3));
 
     // input
     this.pointer.tick(this.reduced ? 1 : Math.min(1, dt * 6));
@@ -156,7 +174,16 @@ export class App {
     this.footage.update(time);
 
     // grid + camera
-    this.grid.update(time, this.pointer.world, this.clock.step, this.clock.env, this._transition);
+    this.grid.update(
+      time,
+      this.pointer.world,
+      this.clock.step,
+      this.clock.env,
+      this._transition,
+      this._sectionSeed,
+      this.reduced ? 0 : this.audio.kick,
+      this.reduced ? 0 : this.audio.level
+    );
     this.cameraRig.update(this.pointer.parallax, this.reduced ? 1 : Math.min(1, dt * 3), this._transition);
 
     // render

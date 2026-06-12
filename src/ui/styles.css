@@ -152,10 +152,13 @@ nav.pill .sep {
 .mark b {
   color: var(--cream);
   font-weight: normal;
-  font-size: 18px;
-  letter-spacing: 0.34em;
+  font-size: 28px;
+  letter-spacing: 0.3em;
   line-height: 1.1;
-  text-shadow: 0 0 18px rgba(255, 92, 0, 0.35);
+  text-shadow: 0 0 24px rgba(255, 92, 0, 0.4);
+}
+.mark b .nine {
+  color: var(--ember);
 }
 .mark .sub {
   font-size: 10px;
@@ -390,11 +393,13 @@ nav.pill .sep {
   color: var(--ember);
 }
 
-/* when a section is open, dim the hero menu */
+/* when a section is open the menu stays — dimmed but fully usable, so
+   you can jump straight from section to section without going back */
 .ui[data-mode='section'] .menu {
-  opacity: 0;
-  transform: translateX(-8px);
-  pointer-events: none;
+  opacity: 0.6;
+}
+.ui[data-mode='section'] .menu .q {
+  opacity: 0.4;
 }
 
 /* ---- ENTER intro ---- */
@@ -428,6 +433,9 @@ nav.pill .sep {
   text-transform: uppercase;
   text-shadow: 0 0 40px rgba(255, 92, 0, 0.45);
   text-indent: 0.22em;
+}
+.intro-mark .nine {
+  color: var(--ember);
 }
 .intro-sub {
   font-size: 11px;

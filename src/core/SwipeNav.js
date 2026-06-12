@@ -56,6 +56,12 @@ export class SwipeNav {
       { passive: true }
     );
 
+    // arrow keys / page keys step through sections too
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') this._move(1);
+      else if (e.key === 'ArrowUp' || e.key === 'PageUp') this._move(-1);
+    });
+
     window.addEventListener(
       'touchstart',
       (e) => {

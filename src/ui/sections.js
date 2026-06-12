@@ -33,14 +33,14 @@ const CONTENT = {
   },
   [STATES.LINEUP]: {
     eyebrow: 'Lineup',
-    title: 'The Lineup',
-    lede: 'Who plays the room.',
+    title: 'Lineup',
+    lede: 'The bill for Volume 909.',
     roster: [
-      ['AÏCHA', '00:00 · Hardware Live'],
-      ['NOUR', '01:30 · Deep Techno'],
-      ['SAID K.', '03:00 · Acid / 303'],
-      ['THE CARETAKER', '04:30 · Selector'],
-      ['GUEST 909', '05:30 · Invitation Only']
+      ['AÏCHA', '23:00 — 00:30'],
+      ['NOUR', '00:30 — 02:00'],
+      ['SAID K.', '02:00 — 03:30'],
+      ['GUEST 909', '03:30 — 05:00'],
+      ['B2B CLOSING', '05:00 — SUNRISE']
     ]
   },
   [STATES.ALBUM]: {

@@ -29,6 +29,9 @@ const VERT = /* glsl */ `
   uniform float uDepthAmp;     // idle float depth
   uniform float uPushAmp;      // sequencer z-push
   uniform float uExplodeAmp;   // transition scatter distance
+  uniform float uSectionSeed;  // per-section scatter rotation (lerped)
+  uniform float uKick;         // 1 -> 0 on each detected kick in the music
+  uniform float uAudio;        // smoothed bass level 0..1
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -39,6 +42,7 @@ const VERT = /* glsl */ `
   varying vec2  vLocalUV;
   varying float vFocus;
   varying float vPulse;
+  varying float vReact;
   varying float vDepth;
 
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -84,24 +88,38 @@ const VERT = /* glsl */ `
     // focused tiles also lift toward the camera so the cursor "grabs" them
     float zFocus = focus * 1.6;
 
-    // sequencer column pulse
-    float pulse = (1.0 - step(0.5, abs(aColumn - uStep))) * uStepEnv;
+    // sequencer column pulse — the column flash rides the music's kick
+    // (uKick is 1 on each detected onset; falls back to the step env)
+    float beat = max(uStepEnv * 0.55, uKick);
+    float pulse = (1.0 - step(0.5, abs(aColumn - uStep))) * beat;
     vPulse = pulse;
     float zPush = pulse * uPushAmp;
 
+    // --- music reaction -------------------------------------------------
+    // a random scattering of tiles bumps with the bass: each kick picks
+    // roughly a quarter of the grid (by seed) and shoves it forward
+    float gate = step(0.72, fract(aSeed.z * 7.0 + floor(uTime * 0.5)));
+    float react = gate * uKick;
+    vReact = react;
+    float zReact = react * (0.6 + aSeed.x * 1.2) + uAudio * (aSeed.y - 0.5) * 0.5;
+
     // --- transition (scatter into a living cloud, not off-screen) ------
     // tiles drift apart, spin and settle into a dim backdrop behind the
-    // section text — they never leave the frame.
+    // section text — they never leave the frame. uSectionSeed rotates the
+    // scatter pattern per section, so moving section -> section visibly
+    // swirls the cloud into a new arrangement.
     float tr = uTransition;
     vec3 outDir = normalize(aSeed - 0.5 + 1e-4);
+    float sa = uSectionSeed * (0.6 + aSeed.y);
+    outDir = rotZ(sa) * outDir;
     vec3 explode = outDir * tr * uExplodeAmp;
     explode.z -= tr * 2.5;                       // push the cloud back a touch
-    local = rotZ(tr * (aSeed.z - 0.5) * 4.0) * local;   // particle spin
+    local = rotZ(tr * (aSeed.z - 0.5) * 4.0 + tr * sa) * local; // particle spin
 
     // --- assemble -----------------------------------------------------
     vec4 world = modelMatrix * instanceMatrix * vec4(local, 1.0);
     world.xyz += explode;
-    world.z += zNoise + zPush + zFocus;
+    world.z += zNoise + zPush + zFocus + zReact;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -118,6 +136,7 @@ const FRAG = /* glsl */ `
   varying vec2  vLocalUV;
   varying float vFocus;
   varying float vPulse;
+  varying float vReact;
   varying float vDepth;
 
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -136,6 +155,8 @@ const FRAG = /* glsl */ `
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
+    // music-reactive tiles glow softly on the kick
+    col += uEmber * vReact * 0.28;
 
     // faint tile border, stronger where unfocused (grid reads as grid)
     vec2 e = smoothstep(0.0, 0.045, vLocalUV) * smoothstep(0.0, 0.045, 1.0 - vLocalUV);
@@ -169,6 +190,9 @@ export class TileGrid {
       uDepthAmp: { value: 1.7 },
       uPushAmp: { value: 0.9 },
       uExplodeAmp: { value: 3.6 },
+      uSectionSeed: { value: 0 },
+      uKick: { value: 0 },
+      uAudio: { value: 0 },
       uReduced: { value: reduced ? 1 : 0 },
       uMap: { value: null },
       uEmber: { value: new THREE.Color(0xff5c00) }
@@ -255,12 +279,15 @@ export class TileGrid {
     this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.45;
   }
 
-  update(time, pointerWorld, step, env, transition) {
+  update(time, pointerWorld, step, env, transition, sectionSeed, kick, audioLevel) {
     this.uniforms.uTime.value = time;
     this.uniforms.uPointer.value.copy(pointerWorld);
     this.uniforms.uStep.value = step;
     this.uniforms.uStepEnv.value = env;
     this.uniforms.uTransition.value = transition;
+    this.uniforms.uSectionSeed.value = sectionSeed;
+    this.uniforms.uKick.value = kick;
+    this.uniforms.uAudio.value = audioLevel;
   }
 
   dispose() {

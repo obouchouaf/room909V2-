@@ -72,9 +72,10 @@ window.__room909.grid.setMap(new THREE.VideoTexture(video));
 
 The site opens behind an ENTER gate; clicking in starts `public/room909.mp3`
 (looped) — the user gesture that satisfies browser autoplay rules. While the
-track plays, the sequencer clock reads the audio's `currentTime` instead of
-free-running, so the pulsing boxes stay locked to the beat (the track and the
-grid are both 128 BPM). To swap the track:
+track plays, a Web Audio `AnalyserNode` listens to the low end: detected
+kicks phase-align the 16-step grid to the actual beat (not just the clock),
+retrigger the column flash, and bump a random scattering of tiles with an
+ember glow. Bass level breathes through the whole mosaic. To swap the track:
 
 ```js
 window.__room909.audio.setSource('/other-track.mp3');

@@ -59,7 +59,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   const mark = document.createElement('div');
   mark.className = 'mark';
   mark.innerHTML =
-    '<b>ROOM 909</b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span><span class="sub">RHYTHM COMPOSER</span>';
+    '<b>ROOM <span class="nine">909</span></b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span><span class="sub">RHYTHM COMPOSER</span>';
 
   // ---- step sequencer ----
   const seq = document.createElement('div');
@@ -90,7 +90,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   const intro = document.createElement('div');
   intro.className = 'intro';
   intro.innerHTML =
-    '<div class="intro-mark">ROOM 909</div>' +
+    '<div class="intro-mark">ROOM <span class="nine">909</span></div>' +
     '<div class="intro-sub">MARRAKECH · RHYTHM COMPOSER</div>' +
     '<button type="button" class="enter" aria-label="Enter Room 909">ENTER</button>';
   const enterBtn = intro.querySelector('.enter');
