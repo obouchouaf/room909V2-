@@ -92,7 +92,7 @@ const VERT = /* glsl */ `
     focus *= uActive;
     vFocus = focus;
     // reveal follows the cursor; reduced motion shows a faint steady 909
-    vReveal = clamp(max(focus * 1.4, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    vReveal = clamp(max(focus * 1.7, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
@@ -229,10 +229,12 @@ const FRAG = /* glsl */ `
     col += uEmber * vFocus * 0.07;
 
     // the 909 lives UNDER the tiles — invisible until the cursor scratches
-    // over it, then it burns in ember and fades again as the cursor leaves
+    // over it. We dim the surrounding tiles in the cursor zone and burn the
+    // glyph bright cream so it reads even over the orange footage.
     float mark = texture2D(uMark, vFullUV).r;
-    col = mix(col, uEmber, mark * vReveal);
-    col += vec3(1.0, 0.55, 0.2) * mark * vReveal * 0.6;
+    col = mix(col, col * 0.28, vReveal * (1.0 - mark));        // darken surround
+    col = mix(col, vec3(0.98, 0.93, 0.82), vReveal * mark);    // cream 909
+    col += uEmber * mark * vReveal * 0.5;                      // ember rim glow
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
