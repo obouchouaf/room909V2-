@@ -12,7 +12,7 @@ const CONTENT = {
     lede: 'One night. One room. A serious sound system. The machine runs until sunrise.',
     meta: [
       ['Date', 'Sat 12 Sep 2026 · 23:00'],
-      ['Location', 'Undisclosed Riad · Medina, Marrakech'],
+      ['Location', 'Le Charleston · Marrakech'],
       ['Sound', 'Custom Stack · Tuned For The Room'],
       ['Format', 'Analog Only · 909 In The Room']
     ],

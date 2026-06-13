@@ -90,12 +90,15 @@ const VERT = /* glsl */ `
     float focus = spatial * uActive;
     vFocus = focus;
 
-    // the hidden text is revealed LOCALLY where you scratch: the reveal
-    // follows the cursor within a small radius and fades as you move away
-    // (and as you stop). Different areas hide different info.
-    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.15, dist);
+    // the hidden text is revealed LOCALLY where you scratch. The reveal is
+    // wider than it is tall (words are horizontal bands), so approaching a
+    // label uncovers the whole word; it fades as you move away or stop.
+    vec2 dv = center.xy - uPointer.xy;
+    dv.x *= 0.5;                                    // widen horizontally
+    float rdist = length(dv);
+    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.5, rdist);
     revFall = revFall * revFall * (3.0 - 2.0 * revFall);
-    vReveal = clamp(max(revFall * uActive * 1.5, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    vReveal = clamp(max(revFall * uActive * 1.6, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
@@ -222,12 +225,12 @@ const FRAG = /* glsl */ `
     // so tiles under the cursor don't glare)
 
     // scratch reveal: the hidden label under the cursor surfaces. The local
-    // surround dims and the text burns cream, so each region shows its own
-    // info (909 centre, MARRAKECH above, coordinates below, ...).
+    // surround dims hard and the text burns bright cream, so each band of
+    // info reads clearly (MARRAKECH / 909 / LE CHARLESTON / coordinates).
     float mark = texture2D(uMark, vFullUV).r;
-    col = mix(col, col * 0.32, vReveal * (1.0 - mark));        // dim local surround
-    col = mix(col, vec3(0.98, 0.93, 0.82), vReveal * mark);    // cream text
-    col += uEmber * mark * vReveal * 0.4;                      // ember rim
+    col = mix(col, col * 0.18, vReveal * (1.0 - mark));        // dim local surround
+    col = mix(col, vec3(1.0, 0.96, 0.88), vReveal * mark);     // bright cream text
+    col += uEmber * mark * vReveal * 0.35;                     // ember rim
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -372,8 +375,10 @@ export class TileGrid {
 
     // focus radius scales with the world so the resolve feels consistent
     this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
-    // tile size in texture UV, so the 909 mask samples crisply across tiles
+    // tile size in texture UV, so the mask samples crisply across tiles
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
+    // redraw the hidden-text mask at the screen aspect (no stretch)
+    this._mark.resize(worldW / worldH);
   }
 
   /** swap the glyph mask text (used by the idle attract animation). */
@@ -404,24 +409,29 @@ export class TileGrid {
 }
 
 /**
- * The hidden-content mask: a canvas with different labels placed in
- * different regions, so scratching different parts of the screen with the
- * cursor uncovers different info — "909" in the centre, the city above,
- * the coordinates below, etc. The tile shader samples it where the cursor
- * is and burns the local text in.
+ * The hidden-content mask: a canvas holding labels stacked in bands, so
+ * scratching up/down the screen with the cursor uncovers different info —
+ * the city, the signature 909, the venue, the coordinates.
+ *
+ * The canvas is redrawn at the screen's aspect ratio (see resize) so the
+ * text is NOT horizontally stretched when sampled across the wide grid,
+ * and each label auto-sizes to fit, so it reads clearly through the tiles.
  */
 function makeMark() {
   const c = document.createElement('canvas');
   c.width = 1024;
-  c.height = 512;
+  c.height = 1024;
   const g = c.getContext('2d');
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
 
-  const label = (text, fx, fy, px) => {
-    g.font = `${px}px "Share Tech Mono", ui-monospace, monospace`;
-    g.fillText(text, c.width * fx, c.height * fy);
-  };
+  // [text, vertical position, max width fraction, target height fraction]
+  const LABELS = [
+    ['MARRAKECH', 0.15, 0.74, 0.1],
+    ['909', 0.42, 0.46, 0.3],
+    ['LE CHARLESTON', 0.67, 0.9, 0.11],
+    ['31.62°N 7.99°W', 0.87, 0.84, 0.08]
+  ];
 
   const draw = () => {
     g.fillStyle = '#000';
@@ -429,18 +439,29 @@ function makeMark() {
     g.fillStyle = '#fff';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    label('909', 0.5, 0.5, 250); //         centre — the signature
-    label('MARRAKECH', 0.5, 0.14, 62); //   top
-    label('31.62°N  7.99°W', 0.5, 0.87, 46); // bottom
-    label('128 BPM', 0.16, 0.5, 48); //     left
-    label('NEXT · SEP 12', 0.84, 0.5, 44); // right
+    for (const [text, fy, wf, hf] of LABELS) {
+      let size = Math.max(8, hf * c.height);
+      g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
+      while (g.measureText(text).width > c.width * wf && size > 8) {
+        size -= 4;
+        g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
+      }
+      g.fillText(text, c.width / 2, c.height * fy);
+    }
     tex.needsUpdate = true;
+  };
+
+  // redraw at the current screen aspect so text isn't stretched
+  const resize = (aspect) => {
+    const h = Math.round(Math.min(4096, Math.max(384, c.width / aspect)));
+    if (h !== c.height) c.height = h;
+    draw();
   };
 
   draw();
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(draw).catch(() => {});
   }
-  // setText kept as a no-op so the (now disabled) attract path is harmless
-  return { texture: tex, setText: () => {} };
+  // setText kept as a no-op so the (disabled) attract path stays harmless
+  return { texture: tex, resize, setText: () => {} };
 }
