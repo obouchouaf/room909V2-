@@ -89,7 +89,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, mark, seq, prompt, tickets, popup.el);
+  root.append(nav, mark, prompt, tickets, popup.el);
 
   // No intro gate: the music starts on the visitor's first real gesture
   // (click or key — the interactions browsers accept for audio unlock).

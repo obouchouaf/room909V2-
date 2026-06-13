@@ -96,9 +96,9 @@ const VERT = /* glsl */ `
     // uncovers that whole word, one band at a time; fades as you move away.
     vec2 dv = center.xy - uPointer.xy;
     dv.x *= 0.5;                                    // wide horizontally
-    dv.y *= 1.6;                                    // short vertically (one band)
+    dv.y *= 1.9;                                    // short vertically (one band)
     float rdist = length(dv);
-    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.3, rdist);
+    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.2, rdist);
     revFall = revFall * revFall * (3.0 - 2.0 * revFall);
     vReveal = clamp(max(revFall * uActive * 1.7, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
@@ -234,9 +234,9 @@ const FRAG = /* glsl */ `
     // surround dims hard and the text burns bright cream, so each band of
     // info reads clearly (MARRAKECH / 909 / LE CHARLESTON / coordinates).
     float mark = texture2D(uMark, vFullUV).r;
-    col = mix(col, col * 0.18, vReveal * (1.0 - mark));        // dim local surround
-    col = mix(col, vec3(1.0, 0.96, 0.88), vReveal * mark);     // bright cream text
-    col += uEmber * mark * vReveal * 0.35;                     // ember rim
+    col = mix(col, col * 0.08, vReveal * (1.0 - mark));        // darken surround hard
+    col = mix(col, vec3(1.0, 0.98, 0.92), vReveal * mark);     // near-white text
+    col += uEmber * mark * vReveal * 0.3;                      // ember rim
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -434,10 +434,10 @@ function makeMark() {
 
   // [text, vertical position, max width fraction, target height fraction]
   const LABELS = [
-    ['MARRAKECH', 0.15, 0.74, 0.095],
-    ['909', 0.43, 0.46, 0.24],
-    ['LE CHARLESTON', 0.66, 0.9, 0.1],
-    ['12 SEP 2026', 0.86, 0.72, 0.085]
+    ['MARRAKECH', 0.15, 0.74, 0.1],
+    ['909', 0.43, 0.5, 0.28],
+    ['LE CHARLESTON', 0.67, 0.92, 0.105],
+    ['12 SEP 2026', 0.87, 0.74, 0.09]
   ];
 
   const draw = () => {
@@ -446,6 +446,8 @@ function makeMark() {
     g.fillStyle = '#fff';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
+    g.strokeStyle = '#fff';
+    g.lineJoin = 'round';
     for (const [text, fy, wf, hf] of LABELS) {
       let size = Math.max(8, hf * c.height);
       g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
@@ -453,6 +455,9 @@ function makeMark() {
         size -= 4;
         g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
       }
+      // stroke + fill so the glyphs are bold enough to read through tiles
+      g.lineWidth = Math.max(2, size * 0.1);
+      g.strokeText(text, c.width / 2, c.height * fy);
       g.fillText(text, c.width / 2, c.height * fy);
     }
     tex.needsUpdate = true;

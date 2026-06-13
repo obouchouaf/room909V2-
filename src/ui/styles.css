@@ -238,10 +238,9 @@ nav.bar {
   display: flex;
   align-items: baseline;
   gap: 18px;
-  padding: 13px 14px 13px 0;
+  padding: 13px 14px 13px 12px;
   border-bottom: 1px solid var(--line);
-  border-left: 2px solid transparent;
-  padding-left: 0;
+  border-left: 2px solid rgba(255, 92, 0, 0.28);
   cursor: default;
   transition: border-color 0.25s var(--ease), padding-left 0.25s var(--ease),
     background 0.25s var(--ease);
@@ -249,9 +248,32 @@ nav.bar {
 .meta-row:hover,
 .meta-row:focus-visible {
   border-left-color: var(--ember);
-  padding-left: 14px;
-  background: linear-gradient(90deg, rgba(255, 92, 0, 0.08), transparent 70%);
+  padding-left: 18px;
+  background: linear-gradient(90deg, rgba(255, 92, 0, 0.1), transparent 70%);
   outline: none;
+}
+/* feature the headline info (Date) — always emphasised + a pulsing marker */
+.meta-row:first-child {
+  border-left-color: var(--ember);
+  background: linear-gradient(90deg, rgba(255, 92, 0, 0.08), transparent 72%);
+}
+.meta-row:first-child .meta-v {
+  color: var(--ember);
+  font-size: clamp(22px, 3.4vw, 32px);
+}
+.meta-row:first-child .meta-k::after {
+  content: ' ●';
+  color: var(--ember);
+  animation: emberPulse 1.5s ease-in-out infinite;
+}
+@keyframes emberPulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .meta-k {
   flex: 0 0 110px;
@@ -450,33 +472,50 @@ nav.bar {
   color: var(--cream);
 }
 
-/* prev / next artist controls (essential on mobile) */
-.stage-ctl {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-top: 22px;
+/* prev / next artist controls — overlaid on the portrait edges so they
+   never collide with the text or the bottom nav bar */
+.stage-visual {
+  position: relative;
 }
 .stage-arrow {
-  width: 42px;
-  height: 42px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(20, 18, 16, 0.4);
+  background: rgba(20, 18, 16, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: var(--ember);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
   transition: background 0.2s var(--ease), color 0.2s var(--ease);
 }
+.stage-arrow.prev {
+  left: 10px;
+}
+.stage-arrow.next {
+  right: 10px;
+}
 .stage-arrow:hover {
   background: var(--ember);
   color: var(--charcoal);
 }
 .stage-count {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 3;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(20, 18, 16, 0.65);
   font-size: 11px;
   letter-spacing: 0.2em;
-  color: var(--dim);
+  color: var(--cream);
 }
 
 /* real photo portrait — toned into the brand palette */
@@ -741,7 +780,8 @@ nav.bar {
   }
   .mosaic i,
   .mosaic .init,
-  .portrait {
+  .portrait,
+  .meta-row:first-child .meta-k::after {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

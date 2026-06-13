@@ -292,7 +292,24 @@ function buildLineup(data) {
   const render = (i) => {
     const a = data.lineup[i];
     stage.innerHTML = '';
-    stage.appendChild(makePortrait(a));
+
+    // portrait + side arrows in one relative block, so the arrows sit on
+    // the edges of the image and never overlap the text or the nav bar
+    const visual = el('div', 'stage-visual');
+    visual.appendChild(makePortrait(a));
+    const prev = el('button', 'stage-arrow prev', '‹');
+    const next = el('button', 'stage-arrow next', '›');
+    prev.type = next.type = 'button';
+    prev.setAttribute('aria-label', 'Previous artist');
+    next.setAttribute('aria-label', 'Next artist');
+    prev.addEventListener('click', () => setActive(index - 1));
+    next.addEventListener('click', () => setActive(index + 1));
+    visual.appendChild(prev);
+    visual.appendChild(next);
+    visual.appendChild(
+      el('span', 'stage-count', `${String(i + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`)
+    );
+    stage.appendChild(visual);
 
     const text = el('div', 'stage-text');
     text.appendChild(el('div', 'stage-name', a.name));
@@ -310,20 +327,6 @@ function buildLineup(data) {
       text.appendChild(links);
     }
     stage.appendChild(text);
-
-    // prev / next controls — the way to move between artists on mobile
-    const ctl = el('div', 'stage-ctl');
-    const prev = el('button', 'stage-arrow', '‹');
-    const next = el('button', 'stage-arrow', '›');
-    prev.type = next.type = 'button';
-    prev.setAttribute('aria-label', 'Previous artist');
-    next.setAttribute('aria-label', 'Next artist');
-    prev.addEventListener('click', () => setActive(index - 1));
-    next.addEventListener('click', () => setActive(index + 1));
-    ctl.appendChild(prev);
-    ctl.appendChild(el('span', 'stage-count', `${String(i + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`));
-    ctl.appendChild(next);
-    stage.appendChild(ctl);
 
     // restart the resolve animation
     stage.classList.remove('resolve');
