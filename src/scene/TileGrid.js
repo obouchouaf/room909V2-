@@ -32,6 +32,9 @@ const VERT = /* glsl */ `
   uniform float uSectionSeed;  // per-section scatter rotation (lerped)
   uniform float uKick;         // 1 -> 0 on each detected kick in the music
   uniform float uAudio;        // smoothed bass level 0..1
+  uniform float uActive;       // pointer activity 0..1 (decays when idle)
+  uniform float uBaseReveal;   // reveal floor for reduced motion
+  uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -39,8 +42,10 @@ const VERT = /* glsl */ `
   attribute float aColumn;     // mapped sequencer column 0..15
 
   varying vec2  vCellUV;
+  varying vec2  vFullUV;       // UV across the whole image (crisp 909)
   varying vec2  vLocalUV;
   varying float vFocus;
+  varying float vReveal;
   varying float vPulse;
   varying float vReact;
   varying float vDepth;
@@ -59,6 +64,7 @@ const VERT = /* glsl */ `
   void main(){
     vLocalUV = uv;
     vCellUV  = aCellUV;
+    vFullUV  = aCellUV + (uv - 0.5) * uCellSize;   // crisp 909 across tiles
 
     // tile center in world space (instanceMatrix is translation + scale only)
     vec3 center = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -69,21 +75,27 @@ const VERT = /* glsl */ `
     // sensitivity and a slow personal flicker, so the response feels
     // organic rather than a perfect radial stamp.
     float t0 = uReduced > 0.5 ? 0.0 : uTime;
-    float gain = mix(0.6, 1.35, hash(aSeed.xy * 19.0));
-    float flick = 0.82 + 0.18 * sin(t0 * (0.7 + aSeed.z * 2.4) + aSeed.x * 6.2831);
+    float gain = mix(0.7, 1.5, hash(aSeed.xy * 19.0));
+    float flick = 0.78 + 0.22 * sin(t0 * (0.8 + aSeed.z * 2.8) + aSeed.x * 6.2831);
 
     float dist  = distance(center.xy, uPointer.xy);
     float focus = 1.0 - smoothstep(0.0, uFocusRadius * gain, dist); // 1 near cursor
     focus = focus * focus * (3.0 - 2.0 * focus);              // ease it
     focus = clamp(focus * flick, 0.0, 1.0);
     focus *= (1.0 - uTransition);                             // no focus mid-section
-    vFocus = focus;
 
-    // tilt the tile toward the cursor (reads as rotating toward camera)
+    // gate the whole interaction on pointer activity: it surges while the
+    // cursor moves and fades when it stops — the 909 appears, then hides.
+    focus *= uActive;
+    vFocus = focus;
+    // reveal follows the cursor; reduced motion shows a faint steady 909
+    vReveal = clamp(max(focus * 1.4, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+
+    // tilt the tile HARD toward the cursor (rotates toward the camera)
     vec2 dir = uPointer.xy - center.xy;
     float dl = length(dir);
     dir = dl > 1e-4 ? dir / dl : vec2(0.0);
-    float tilt = focus * 1.05;
+    float tilt = focus * 1.8;
 
     vec3 local = position;
     local = rotX(-dir.y * tilt) * rotY(dir.x * tilt) * local;
@@ -92,9 +104,11 @@ const VERT = /* glsl */ `
     float t = uReduced > 0.5 ? 0.0 : uTime;
     float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.05);  // slow idle float
     // idle float; collapses toward the plane under focus (image resolves)
-    float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.9);
-    // focused tiles also lift toward the camera so the cursor "grabs" them
-    float zFocus = focus * 1.6;
+    float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.95);
+    // focused tiles lunge toward the camera so the cursor really "grabs"
+    float zFocus = focus * 3.4;
+    // a ripple ring chases the cursor for a liquid, alive feel
+    float ripple = sin(dist * 2.6 - t * 5.0) * focus * 0.7;
 
     // sequencer column pulse — the column flash rides the music's kick
     // (uKick is 1 on each detected onset; falls back to the step env)
@@ -127,7 +141,9 @@ const VERT = /* glsl */ `
     // --- assemble -----------------------------------------------------
     vec4 world = modelMatrix * instanceMatrix * vec4(local, 1.0);
     world.xyz += explode;
-    world.z += zNoise + zPush + zFocus + zReact;
+    // magnetism: tiles lean toward the cursor in the plane
+    world.xy += dir * focus * 0.55;
+    world.z += zNoise + zPush + zFocus + zReact + ripple;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -137,12 +153,15 @@ const VERT = /* glsl */ `
 const FRAG = /* glsl */ `
   precision highp float;
   uniform sampler2D uMap;
+  uniform sampler2D uMark;   // the 909 glyph mask
   uniform vec3  uEmber;
   uniform float uTransition;
 
   varying vec2  vCellUV;
+  varying vec2  vFullUV;
   varying vec2  vLocalUV;
   varying float vFocus;
+  varying float vReveal;
   varying float vPulse;
   varying float vReact;
   varying float vDepth;
@@ -150,16 +169,22 @@ const FRAG = /* glsl */ `
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 
   void main(){
-    // When unfocused, the tile samples the footage slightly off its true
+    // When unfocused, the tile samples the footage well off its true
     // region — the mosaic is scattered. Focus pulls the sample home, so
-    // the image resolves under the cursor (the prototype's core trick).
+    // the image resolves sharply under the cursor (the core trick).
     vec2 jitter = (vec2(hash(vCellUV * 53.0), hash(vCellUV * 91.0)) - 0.5);
-    float scatter = (1.0 - vFocus) * (0.16 + uTransition * 0.10);
+    float scatter = (1.0 - vFocus) * (0.22 + uTransition * 0.10);
     vec3 col = texture2D(uMap, vCellUV + jitter * scatter).rgb;
 
-    // resolve brightens the focused region and warms it slightly
-    col *= 1.0 + vFocus * 0.22;
-    col += uEmber * vFocus * 0.05;
+    // resolve brightens the focused region and warms it
+    col *= 1.0 + vFocus * 0.35;
+    col += uEmber * vFocus * 0.07;
+
+    // the 909 lives UNDER the tiles — invisible until the cursor scratches
+    // over it, then it glows in ember and fades again as the cursor leaves
+    float mark = texture2D(uMark, vFullUV).r;
+    col = mix(col, uEmber, mark * vReveal * 0.9);
+    col += vec3(0.94, 0.91, 0.86) * mark * vReveal * 0.25;
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -179,7 +204,7 @@ const FRAG = /* glsl */ `
 `;
 
 export class TileGrid {
-  constructor({ reduced = false, capacityCols = 44, capacityRows = 26 } = {}) {
+  constructor({ reduced = false, capacityCols = 56, capacityRows = 34 } = {}) {
     this.reduced = reduced;
     this.capCols = capacityCols;
     this.capRows = capacityRows;
@@ -201,8 +226,12 @@ export class TileGrid {
       uSectionSeed: { value: 0 },
       uKick: { value: 0 },
       uAudio: { value: 0 },
+      uActive: { value: 0 },
+      uBaseReveal: { value: reduced ? 0.28 : 0 },
+      uCellSize: { value: new THREE.Vector2(0.05, 0.05) },
       uReduced: { value: reduced ? 1 : 0 },
       uMap: { value: null },
+      uMark: { value: makeMarkTexture() },
       uEmber: { value: new THREE.Color(0xff5c00) }
     };
 
@@ -284,10 +313,12 @@ export class TileGrid {
     this._column.needsUpdate = true;
 
     // focus radius scales with the world so the resolve feels consistent
-    this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.45;
+    this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
+    // tile size in texture UV, so the 909 mask samples crisply across tiles
+    this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
   }
 
-  update(time, pointerWorld, step, env, transition, sectionSeed, kick, audioLevel) {
+  update(time, pointerWorld, step, env, transition, sectionSeed, kick, audioLevel, active) {
     this.uniforms.uTime.value = time;
     this.uniforms.uPointer.value.copy(pointerWorld);
     this.uniforms.uStep.value = step;
@@ -296,10 +327,37 @@ export class TileGrid {
     this.uniforms.uSectionSeed.value = sectionSeed;
     this.uniforms.uKick.value = kick;
     this.uniforms.uAudio.value = audioLevel;
+    this.uniforms.uActive.value = active;
   }
 
   dispose() {
     this.mesh.geometry.dispose();
     this.material.dispose();
   }
+}
+
+/** Draw "909" once to a canvas → texture used as the hidden mask. */
+function makeMarkTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 512;
+  const g = c.getContext('2d');
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+
+  const draw = () => {
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#fff';
+    g.font = '380px "Share Tech Mono", ui-monospace, monospace';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('909', c.width / 2, c.height / 2 + 20);
+    tex.needsUpdate = true;
+  };
+  draw();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(draw).catch(() => {});
+  }
+  return tex;
 }

@@ -155,13 +155,15 @@ function buildLineup(data) {
   const stage = el('div', 'lineup-stage');
   stage.setAttribute('aria-live', 'polite');
 
+  const count = data.lineup.length;
+  let index = 0;
   const buttons = [];
-  const setActive = (i) => {
-    const a = data.lineup[i];
-    buttons.forEach((b, j) => b.setAttribute('aria-current', String(j === i)));
 
+  const render = (i) => {
+    const a = data.lineup[i];
     stage.innerHTML = '';
     stage.appendChild(makeMosaic(a.name, a.initials));
+
     const text = el('div', 'stage-text');
     text.appendChild(el('div', 'stage-name', a.name));
     text.appendChild(el('div', 'stage-time', a.time));
@@ -178,10 +180,31 @@ function buildLineup(data) {
       text.appendChild(links);
     }
     stage.appendChild(text);
+
+    // prev / next controls — the way to move between artists on mobile
+    const ctl = el('div', 'stage-ctl');
+    const prev = el('button', 'stage-arrow', '‹');
+    const next = el('button', 'stage-arrow', '›');
+    prev.type = next.type = 'button';
+    prev.setAttribute('aria-label', 'Previous artist');
+    next.setAttribute('aria-label', 'Next artist');
+    prev.addEventListener('click', () => setActive(index - 1));
+    next.addEventListener('click', () => setActive(index + 1));
+    ctl.appendChild(prev);
+    ctl.appendChild(el('span', 'stage-count', `${String(i + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`));
+    ctl.appendChild(next);
+    stage.appendChild(ctl);
+
     // restart the resolve animation
     stage.classList.remove('resolve');
     void stage.offsetWidth;
     stage.classList.add('resolve');
+  };
+
+  const setActive = (i) => {
+    index = ((i % count) + count) % count; // wrap both directions
+    buttons.forEach((b, j) => b.setAttribute('aria-current', String(j === index)));
+    render(index);
   };
 
   data.lineup.forEach((artist, i) => {
@@ -196,6 +219,16 @@ function buildLineup(data) {
     li.appendChild(btn);
     names.appendChild(li);
   });
+
+  // horizontal swipe on the stage steps between artists (touch)
+  let sx = null;
+  stage.addEventListener('touchstart', (e) => { sx = e.touches[0] ? e.touches[0].clientX : null; }, { passive: true });
+  stage.addEventListener('touchend', (e) => {
+    if (sx == null) return;
+    const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
+    if (Math.abs(dx) > 45) setActive(index + (dx < 0 ? 1 : -1));
+    sx = null;
+  }, { passive: true });
 
   wrap.appendChild(names);
   wrap.appendChild(stage);

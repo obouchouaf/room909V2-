@@ -133,7 +133,7 @@ export class App {
     // row count, so phones don't get huge chunky tiles. Portrait screens
     // (small min-edge) still get a denser grid than before.
     const isMobile = w < 720;
-    const targetTilePx = isMobile ? 46 : 64; // smaller tiles on phones
+    const targetTilePx = isMobile ? 38 : 50; // smaller, denser tiles
     const rows = Math.max(10, Math.min(this.grid.capRows, Math.round(h / targetTilePx)));
     const cols = Math.max(6, Math.min(this.grid.capCols, Math.round(w / targetTilePx)));
 
@@ -183,7 +183,8 @@ export class App {
       this._transition,
       this._sectionSeed,
       this.reduced ? 0 : this.audio.kick,
-      this.reduced ? 0 : this.audio.level
+      this.reduced ? 0 : this.audio.level,
+      this.pointer.strength
     );
     this.cameraRig.update(this.pointer.parallax, this.reduced ? 1 : Math.min(1, dt * 3), this._transition);
 

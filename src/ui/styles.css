@@ -441,6 +441,35 @@ nav.pill .sep {
   color: var(--cream);
 }
 
+/* prev / next artist controls (essential on mobile) */
+.stage-ctl {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 22px;
+}
+.stage-arrow {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(20, 18, 16, 0.4);
+  color: var(--ember);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.stage-arrow:hover {
+  background: var(--ember);
+  color: var(--charcoal);
+}
+.stage-count {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+}
+
 /* the mosaic portrait — tiles resolve into focus on reveal */
 .mosaic {
   position: relative;
@@ -603,12 +632,20 @@ nav.pill .sep {
   .seq i:nth-child(n + 9) {
     display: none;
   }
+  /* sections scroll on mobile so tall content never overlaps the chrome */
   .section {
-    padding: 0 7vw;
+    padding: 78px 7vw 120px;
+    justify-content: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .close {
     top: 14px;
     left: 14px;
+  }
+  /* on mobile the names list is replaced by the swipe/arrow carousel */
+  .lineup-names {
+    display: none;
   }
   /* bottom-right is free on mobile (the sequencer moves bottom-left) */
   .tickets {

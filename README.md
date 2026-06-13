@@ -75,7 +75,12 @@ keypress — the gesture browsers require for audio. While the
 track plays, a Web Audio `AnalyserNode` listens to the low end: detected
 kicks phase-align the 16-step grid to the actual beat (not just the clock),
 retrigger the column flash, and bump a random scattering of tiles with an
-ember glow. Bass level breathes through the whole mosaic. To swap the track:
+ember glow. Bass level breathes through the whole mosaic.
+
+The 909 is hidden under the tiles: a glyph mask the cursor "scratches" into
+view (it surges where you move and fades when you stop). The cursor also
+tilts, lifts and magnetises nearby tiles with a ripple — interaction is
+gated on pointer activity, so the scene calms when idle. To swap the track:
 
 ```js
 window.__room909.audio.setSource('/other-track.mp3');

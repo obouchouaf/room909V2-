@@ -21,6 +21,9 @@ export class PointerRig {
     this.parallax = new THREE.Vector2(0, 0);
     // smoothed world-space target on the z=0 plane
     this.world = new THREE.Vector3(0, 0, 0);
+    // activity 0..1 — surges while the pointer moves, fades when it stops
+    this.strength = 0;
+    this._lastMove = -1e9;
 
     // scratch — reused every frame
     this._ray = new THREE.Raycaster();
@@ -36,6 +39,7 @@ export class PointerRig {
     const onMove = (x, y) => {
       this._ndc.set((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
       this._active = true;
+      this._lastMove = performance.now();
     };
 
     window.addEventListener('pointermove', (e) => onMove(e.clientX, e.clientY));
@@ -57,6 +61,7 @@ export class PointerRig {
         THREE.MathUtils.clamp((e.beta - 45) / 30, -1, 1)
       );
       this._active = true;
+      this._lastMove = performance.now();
     });
   }
 
@@ -80,8 +85,14 @@ export class PointerRig {
       // freeze at a stable composition, slightly above center
       this.parallax.set(0, 0);
       this.world.set(0, 1.2, 0);
+      this.strength = 0;
       return;
     }
+
+    // activity: ~1 while moving, easing to 0 over ~1s after the last move,
+    // so the cursor reveal (and the 909) fades out when you stop
+    const since = (performance.now() - this._lastMove) / 1000;
+    this.strength = Math.max(0, 1 - since / 1.1);
 
     // smooth the parallax signal
     this.parallax.x += (THREE.MathUtils.clamp(tx, -1, 1) - this.parallax.x) * damp;
