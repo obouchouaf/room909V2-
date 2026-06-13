@@ -9,12 +9,14 @@ const CONTENT = {
   [STATES.NEXT_EVENT]: {
     eyebrow: 'Next Event',
     title: 'Volume 909',
-    lede: 'One night. One room. A serious sound system. The machine runs until sunrise.',
+    lede: 'Le Charleston — a historic Marrakech cabaret, transformed into ROOM 909 for one night. VOID Acoustics, full production and lighting, until sunrise.',
     meta: [
       ['Date', 'Sat 12 Sep 2026 · 23:00'],
-      ['Location', 'Le Charleston · Marrakech'],
-      ['Sound', 'Custom Stack · Tuned For The Room'],
-      ['Format', 'Analog Only · 909 In The Room']
+      ['Venue', 'Le Charleston · Historic Cabaret'],
+      ['Location', 'Marrakech'],
+      ['Sound', 'VOID Acoustics · Full Range'],
+      ['Production', 'Lighting · Full Stage Build'],
+      ['Format', 'Analog · 909 In The Room']
     ],
     cta: ['Get Tickets', 'https://shotgun.live/'] // TODO: real ticket link
   },
@@ -24,48 +26,19 @@ const CONTENT = {
     lede: 'The bill for Volume 909. Move across a name.',
     lineup: [
       {
-        name: 'AÏCHA',
-        time: '23:00 — 00:30',
-        initials: 'AÏ',
-        bio: 'Hardware live set. A 909, a 303, no laptop. Opens the room slow and lets the machines warm up with it.',
-        links: [
-          ['SoundCloud', 'https://soundcloud.com/'],
-          ['Instagram', 'https://instagram.com/']
-        ]
-      },
-      {
-        name: 'NOUR',
-        time: '00:30 — 02:00',
-        initials: 'NO',
-        bio: 'Deep, patient techno from Casablanca. Long blends, low ceilings, no rush.',
-        links: [
-          ['SoundCloud', 'https://soundcloud.com/'],
-          ['Instagram', 'https://instagram.com/']
-        ]
-      },
-      {
-        name: 'SAID K.',
-        time: '02:00 — 03:30',
-        initials: 'SK',
-        bio: 'Acid worship. Marrakech native — a 303 in hand since 2015 and no intention of putting it down.',
-        links: [
-          ['SoundCloud', 'https://soundcloud.com/'],
-          ['Bandcamp', 'https://bandcamp.com/']
-        ]
-      },
-      {
-        name: 'GUEST 909',
-        time: '03:30 — 05:00',
-        initials: '909',
-        bio: 'Announced at the door. Trust the room.',
+        name: 'FRAUSARP',
+        time: '23:00 — 01:30',
+        initials: 'FR',
+        bio: 'Opens the room. Patient, hypnotic builds that set the night in motion before the close.',
         links: []
       },
       {
-        name: 'B2B CLOSING',
-        time: '05:00 — SUNRISE',
-        initials: 'B2B',
-        bio: 'Everyone still standing. Four hands minimum, sunrise through the smoke.',
-        links: []
+        name: 'HASHASHIN',
+        time: '01:30 — SUNRISE',
+        initials: 'HK',
+        photo: '/hashashin.jpg',
+        bio: 'Headline close. Hardware-driven, hypnotic techno held all the way to the lights coming up.',
+        links: [['SoundCloud', 'https://soundcloud.com/hashashin_kawasaki']]
       }
     ]
   },
@@ -144,6 +117,27 @@ function makeMosaic(seedStr, initials, cols = 16, rows = 10) {
 }
 
 /**
+ * Artist portrait: a real photo when one is provided (toned into the brand
+ * with a charcoal/ember overlay), otherwise the generated mosaic. If the
+ * photo fails to load it falls back to the mosaic automatically.
+ */
+function makePortrait(a) {
+  if (!a.photo) return makeMosaic(a.name, a.initials);
+
+  const wrap = el('div', 'portrait');
+  const img = document.createElement('img');
+  img.src = a.photo;
+  img.alt = a.name;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.addEventListener('error', () => {
+    wrap.replaceWith(makeMosaic(a.name, a.initials));
+  });
+  wrap.appendChild(img);
+  return wrap;
+}
+
+/**
  * The lineup: not a tooltip box. A list of names on the left; moving across
  * (or focusing) a name resolves that artist's mosaic portrait, bio and
  * links into a full bleed "stage" on the right — the tiles snap into focus
@@ -162,7 +156,7 @@ function buildLineup(data) {
   const render = (i) => {
     const a = data.lineup[i];
     stage.innerHTML = '';
-    stage.appendChild(makeMosaic(a.name, a.initials));
+    stage.appendChild(makePortrait(a));
 
     const text = el('div', 'stage-text');
     text.appendChild(el('div', 'stage-name', a.name));

@@ -450,6 +450,41 @@ nav.bar {
   color: var(--dim);
 }
 
+/* real photo portrait — toned into the brand palette */
+.portrait {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--charcoal);
+  opacity: 0;
+  transform: scale(0.96);
+}
+.portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.5) contrast(1.05) brightness(0.92);
+  mix-blend-mode: luminosity;
+}
+.portrait::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+      180deg,
+      rgba(20, 18, 16, 0.15),
+      rgba(20, 18, 16, 0.75)
+    ),
+    radial-gradient(circle at 70% 25%, rgba(255, 92, 0, 0.28), transparent 60%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.lineup-stage.resolve .portrait {
+  animation: tileIn 0.5s var(--ease) forwards;
+}
+
 /* the mosaic portrait — tiles resolve into focus on reveal */
 .mosaic {
   position: relative;
@@ -673,7 +708,8 @@ nav.bar {
     transition: none !important;
   }
   .mosaic i,
-  .mosaic .init {
+  .mosaic .init,
+  .portrait {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
