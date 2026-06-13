@@ -100,11 +100,13 @@ nav.pill .sep {
   background: var(--line);
 }
 
-/* ---- left menu ---- */
+/* ---- menu — lower centre ---- */
 .menu {
   position: fixed;
-  left: 26px;
-  bottom: 124px;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  text-align: center;
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -133,7 +135,7 @@ nav.pill .sep {
 }
 .menu button:hover {
   color: var(--ember);
-  transform: translateX(4px);
+  transform: translateY(-1px);
 }
 .menu button[aria-current='true'] {
   color: var(--ember);
@@ -616,8 +618,7 @@ nav.pill .sep {
     padding: 8px 14px;
   }
   .menu {
-    left: 18px;
-    bottom: 96px;
+    bottom: 84px;
   }
   .mark {
     left: 18px;

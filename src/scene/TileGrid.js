@@ -91,11 +91,11 @@ const VERT = /* glsl */ `
     // reveal follows the cursor; reduced motion shows a faint steady 909
     vReveal = clamp(max(focus * 1.4, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
-    // tilt the tile HARD toward the cursor (rotates toward the camera)
+    // tilt the tile toward the cursor (rotates toward the camera)
     vec2 dir = uPointer.xy - center.xy;
     float dl = length(dir);
     dir = dl > 1e-4 ? dir / dl : vec2(0.0);
-    float tilt = focus * 1.8;
+    float tilt = focus * 1.15;
 
     vec3 local = position;
     local = rotX(-dir.y * tilt) * rotY(dir.x * tilt) * local;
@@ -105,10 +105,10 @@ const VERT = /* glsl */ `
     float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.05);  // slow idle float
     // idle float; collapses toward the plane under focus (image resolves)
     float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.95);
-    // focused tiles lunge toward the camera so the cursor really "grabs"
-    float zFocus = focus * 3.4;
-    // a ripple ring chases the cursor for a liquid, alive feel
-    float ripple = sin(dist * 2.6 - t * 5.0) * focus * 0.7;
+    // focused tiles lift toward the camera — gentler so it's less "boxy"
+    float zFocus = focus * 1.7;
+    // a soft ripple ring chases the cursor for a liquid, alive feel
+    float ripple = sin(dist * 2.6 - t * 5.0) * focus * 0.4;
 
     // sequencer column pulse — the column flash rides the music's kick
     // (uKick is 1 on each detected onset; falls back to the step env)
@@ -141,8 +141,8 @@ const VERT = /* glsl */ `
     // --- assemble -----------------------------------------------------
     vec4 world = modelMatrix * instanceMatrix * vec4(local, 1.0);
     world.xyz += explode;
-    // magnetism: tiles lean toward the cursor in the plane
-    world.xy += dir * focus * 0.55;
+    // light magnetism: tiles lean toward the cursor in the plane
+    world.xy += dir * focus * 0.3;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
 
     vDepth = world.z;
@@ -156,6 +156,7 @@ const FRAG = /* glsl */ `
   uniform sampler2D uMark;   // the 909 glyph mask
   uniform vec3  uEmber;
   uniform float uTransition;
+  uniform float uTime;
 
   varying vec2  vCellUV;
   varying vec2  vFullUV;
@@ -174,17 +175,26 @@ const FRAG = /* glsl */ `
     // the image resolves sharply under the cursor (the core trick).
     vec2 jitter = (vec2(hash(vCellUV * 53.0), hash(vCellUV * 91.0)) - 0.5);
     float scatter = (1.0 - vFocus) * (0.22 + uTransition * 0.10);
-    vec3 col = texture2D(uMap, vCellUV + jitter * scatter).rgb;
+    vec2 sampUV = vCellUV + jitter * scatter;
+
+    // a touch of trippy chromatic split — a slow wobble, stronger near the
+    // cursor. Restrained: it shimmers, it doesn't smear.
+    float ca = (0.004 + vFocus * 0.010) * (0.6 + 0.4 * sin(uTime * 0.7 + vCellUV.x * 6.0));
+    vec2 cao = vec2(ca, ca * 0.4);
+    vec3 col;
+    col.r = texture2D(uMap, sampUV + cao).r;
+    col.g = texture2D(uMap, sampUV).g;
+    col.b = texture2D(uMap, sampUV - cao).b;
 
     // resolve brightens the focused region and warms it
     col *= 1.0 + vFocus * 0.35;
     col += uEmber * vFocus * 0.07;
 
     // the 909 lives UNDER the tiles — invisible until the cursor scratches
-    // over it, then it glows in ember and fades again as the cursor leaves
+    // over it, then it burns in ember and fades again as the cursor leaves
     float mark = texture2D(uMark, vFullUV).r;
-    col = mix(col, uEmber, mark * vReveal * 0.9);
-    col += vec3(0.94, 0.91, 0.86) * mark * vReveal * 0.25;
+    col = mix(col, uEmber, mark * vReveal);
+    col += vec3(1.0, 0.55, 0.2) * mark * vReveal * 0.6;
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -349,10 +359,17 @@ function makeMarkTexture() {
     g.fillStyle = '#000';
     g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = '#fff';
-    g.font = '380px "Share Tech Mono", ui-monospace, monospace';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText('909', c.width / 2, c.height / 2 + 20);
+    // size the glyph to nearly fill the frame so scratching anywhere
+    // across the mosaic reveals part of the 909
+    let size = 520;
+    g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
+    while (g.measureText('909').width > c.width * 0.92 && size > 40) {
+      size -= 10;
+      g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
+    }
+    g.fillText('909', c.width / 2, c.height / 2 + 18);
     tex.needsUpdate = true;
   };
   draw();
