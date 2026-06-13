@@ -5,17 +5,10 @@ import { STATES } from './Director.js';
  * vertically, as well as via the menu. Swipe/scroll UP advances deeper
  * into the site; DOWN steps back toward the hero.
  *
- * Order: HERO → NEXT EVENT → PAST NIGHTS → LINEUP → ALBUM → CONTACT.
+ * Order: HERO → NEXT EVENT → LINEUP → CONTACT.
  * Both inputs are debounced so one gesture moves exactly one step.
  */
-const ORDER = [
-  STATES.HERO,
-  STATES.NEXT_EVENT,
-  STATES.PAST_NIGHTS,
-  STATES.LINEUP,
-  STATES.ALBUM,
-  STATES.CONTACT
-];
+const ORDER = [STATES.HERO, STATES.NEXT_EVENT, STATES.LINEUP, STATES.CONTACT];
 
 export class SwipeNav {
   constructor(director, { cooldown = 700 } = {}) {

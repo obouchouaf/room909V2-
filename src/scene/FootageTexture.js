@@ -74,12 +74,14 @@ const FRAG = /* glsl */ `
                * smoothstep(1.2, 0.2, p.y + 1.0);
     col += cream * beam * 0.04;
 
-    // a 909 hidden in the smoke — barely there, breathing in and out,
-    // shaped by the same noise so it never reads as an overlay
+    // a 909 worked into the smoke — visible but still part of the scene,
+    // breathing in and out and textured by the same noise
     vec2 muv = vec2((vUv.x - 0.5) * uAspect, vUv.y - 0.5) * 1.05 + 0.5;
     float mark = texture2D(uMark, muv).r;
     float breathe = 0.5 + 0.5 * sin(t * 0.09);
-    col += ember * mark * n * (0.05 + 0.06 * breathe);
+    float mk = mark * (0.20 + 0.14 * breathe) * (0.6 + 0.4 * n);
+    col = mix(col, ember, mk * 0.85);
+    col += cream * mark * 0.05 * breathe;
 
     gl_FragColor = vec4(col, 1.0);
   }

@@ -284,84 +284,6 @@ nav.pill .sep {
   color: var(--charcoal);
 }
 
-/* past nights card grid */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 14px;
-  list-style: none;
-}
-.cards li {
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  overflow: hidden;
-  background: rgba(20, 18, 16, 0.3);
-}
-.cards .thumb {
-  aspect-ratio: 4 / 3;
-  background: linear-gradient(135deg, var(--rust), var(--charcoal));
-  position: relative;
-}
-.cards .thumb::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 70% 30%,
-    rgba(255, 92, 0, 0.45),
-    transparent 60%
-  );
-}
-.cards .label {
-  padding: 9px 11px;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: var(--cream);
-}
-.cards .label span {
-  display: block;
-  color: var(--dim);
-  margin-top: 3px;
-}
-
-/* residents list */
-.roster {
-  list-style: none;
-}
-.roster li {
-  display: flex;
-  justify-content: space-between;
-  padding: 13px 0;
-  border-bottom: 1px solid var(--line);
-}
-.roster .name {
-  color: var(--cream);
-}
-.roster .role {
-  color: var(--ember);
-  font-size: 11px;
-}
-
-/* album tracklist */
-.tracks {
-  list-style: none;
-  columns: 2;
-  column-gap: 40px;
-}
-.tracks li {
-  display: flex;
-  gap: 14px;
-  padding: 9px 0;
-  break-inside: avoid;
-}
-.tracks .no {
-  color: var(--ember);
-  width: 28px;
-}
-.tracks .title {
-  color: var(--cream);
-}
-
 /* close / back control */
 .close {
   position: fixed;
@@ -434,70 +356,113 @@ nav.pill .sep {
   pointer-events: none;
 }
 
-/* ---- lineup artist hover cards ---- */
-.roster li.artist {
-  position: relative;
+/* ---- lineup: names + a full-bleed reveal stage (no box) ---- */
+.lineup {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) 1.2fr;
+  gap: 48px;
+  align-items: start;
 }
-.artist-btn {
+.lineup-names {
+  list-style: none;
+}
+.lineup-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
   background: none;
   border: none;
-  padding: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+  text-align: left;
   font-family: inherit;
-  font-size: 13px;
-  letter-spacing: 0.08em;
+  font-size: 15px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--cream);
+  color: var(--dim);
   cursor: pointer;
-  transition: color 0.2s var(--ease);
+  transition: color 0.2s var(--ease), padding-left 0.25s var(--ease);
 }
-.artist-btn::after {
-  content: ' +';
-  color: var(--ember);
-  opacity: 0.6;
+.lineup-name .lineup-time {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: rgba(239, 233, 220, 0.35);
 }
-.artist-btn:hover {
-  color: var(--ember);
+.lineup-name:hover,
+.lineup-name[aria-current='true'] {
+  color: var(--cream);
+  padding-left: 12px;
 }
-.artist-card {
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 12px);
-  width: min(320px, 78vw);
-  padding: 14px;
-  border: 1px solid var(--line);
-  background: rgba(20, 18, 16, 0.94);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 6;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(8px);
-  pointer-events: none;
-  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
-    visibility 0s linear 0.3s;
-}
-.roster li.artist:hover .artist-card,
-.roster li.artist:focus-within .artist-card,
-.roster li.artist.open .artist-card {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
-    visibility 0s linear 0s;
+.lineup-name[aria-current='true'] {
+  border-bottom-color: var(--ember);
 }
 
-/* the artist "portrait": a mini mosaic in the site's own language */
+/* the reveal stage — bleeds, no border, no panel */
+.lineup-stage {
+  position: relative;
+}
+.stage-name {
+  font-size: clamp(22px, 3.4vw, 38px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cream);
+  margin-top: 14px;
+}
+.stage-time {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ember);
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+.stage-bio {
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  line-height: 1.8;
+  color: var(--dim);
+  text-transform: uppercase;
+  max-width: 42ch;
+  margin-top: 12px;
+}
+.stage-links {
+  display: flex;
+  gap: 18px;
+  margin-top: 14px;
+}
+.stage-links a {
+  color: var(--ember);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.stage-links a:hover {
+  color: var(--cream);
+}
+
+/* the mosaic portrait — tiles resolve into focus on reveal */
 .mosaic {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(16, 1fr);
   gap: 2px;
-  aspect-ratio: 16 / 9;
-  margin-bottom: 11px;
+  aspect-ratio: 16 / 10;
+  width: 100%;
 }
 .mosaic i {
   display: block;
+  opacity: 0;
+  transform: scale(0.6);
+}
+.lineup-stage.resolve .mosaic i {
+  animation: tileIn 0.5s var(--ease) forwards;
+}
+@keyframes tileIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .mosaic .init {
   position: absolute;
@@ -505,33 +470,112 @@ nav.pill .sep {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
+  font-size: clamp(36px, 6vw, 72px);
   letter-spacing: 0.3em;
   text-indent: 0.3em;
   color: var(--cream);
-  text-shadow: 0 0 18px rgba(255, 92, 0, 0.6);
+  text-shadow: 0 0 24px rgba(255, 92, 0, 0.6);
+  opacity: 0;
 }
-.artist-card .bio {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  line-height: 1.7;
+.lineup-stage.resolve .init {
+  animation: initIn 0.6s var(--ease) 0.35s forwards;
+}
+@keyframes initIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- Rhythm Composer link + popup ---- */
+.rc-link {
+  align-self: flex-start;
+  margin-top: 3px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 0.2s var(--ease);
+}
+.rc-link::after {
+  content: ' ⌖';
+  color: var(--ember);
+}
+.rc-link:hover {
+  color: var(--ember);
+}
+.popup {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 18, 16, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s var(--ease), visibility 0s linear 0.35s;
+}
+.popup.show {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s var(--ease);
+}
+.popup-panel {
+  position: relative;
+  max-width: 460px;
+  padding: 32px 30px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--ember);
+  background: rgba(20, 18, 16, 0.96);
+  transform: translateY(10px);
+  transition: transform 0.4s var(--ease);
+}
+.popup.show .popup-panel {
+  transform: translateY(0);
+}
+.popup-x {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--ember);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.popup-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--ember);
+  text-transform: uppercase;
+}
+.popup-mark {
+  font-size: 44px;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  color: var(--cream);
+  text-transform: uppercase;
+  margin: 8px 0 18px;
+}
+.popup-mark .nine {
+  color: var(--ember);
+}
+.popup-panel p {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  line-height: 1.85;
   color: var(--dim);
   text-transform: uppercase;
-  margin-bottom: 10px;
-}
-.artist-card .links {
-  display: flex;
-  gap: 16px;
-}
-.artist-card .links a {
-  color: var(--ember);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  text-decoration: none;
-}
-.artist-card .links a:hover {
-  color: var(--cream);
+  margin-bottom: 12px;
 }
 
 /* ---- responsive ---- */
@@ -562,9 +606,6 @@ nav.pill .sep {
   .section {
     padding: 0 7vw;
   }
-  .tracks {
-    columns: 1;
-  }
   .close {
     top: 14px;
     left: 14px;
@@ -577,19 +618,15 @@ nav.pill .sep {
     transform: none;
     padding: 12px 22px;
   }
-  .artist-card {
-    position: fixed;
-    left: 7vw;
-    right: 7vw;
-    bottom: auto;
-    top: 50%;
-    transform: translateY(-50%);
-    width: auto;
+  .lineup {
+    grid-template-columns: 1fr;
+    gap: 22px;
   }
-  .roster li.artist:hover .artist-card,
-  .roster li.artist:focus-within .artist-card,
-  .roster li.artist.open .artist-card {
-    transform: translateY(-50%);
+  .lineup-stage {
+    order: -1;
+  }
+  .stage-bio {
+    max-width: none;
   }
 }
 
@@ -601,8 +638,16 @@ nav.pill .sep {
   .section,
   .cta,
   .tickets,
-  .artist-card,
+  .lineup-name,
+  .popup,
+  .popup-panel,
   nav.pill button {
     transition: none !important;
+  }
+  .mosaic i,
+  .mosaic .init {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

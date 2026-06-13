@@ -10,18 +10,14 @@
 export const STATES = {
   HERO: 'HERO',
   NEXT_EVENT: 'NEXT_EVENT',
-  PAST_NIGHTS: 'PAST_NIGHTS',
   LINEUP: 'LINEUP',
-  ALBUM: 'ALBUM',
   CONTACT: 'CONTACT'
 };
 
 // every non-hero state opens a content section over a scattered grid
 const SECTION_STATES = new Set([
   STATES.NEXT_EVENT,
-  STATES.PAST_NIGHTS,
   STATES.LINEUP,
-  STATES.ALBUM,
   STATES.CONTACT
 ]);
 

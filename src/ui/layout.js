@@ -4,7 +4,7 @@ import { buildSections } from './sections.js';
 /**
  * Builds the fixed UI chrome and wires it to the Director:
  *   - top-right pill nav (EVENTS / CONTACT / SOUND)
- *   - left menu (NEXT EVENT / PAST NIGHTS / LINEUP / THE ALBUM)
+ *   - left menu (NEXT EVENT / LINEUP / CONTACT)
  *   - bottom-left wordmark
  *   - bottom-right 16-step sequencer (cells returned for the clock)
  *   - close/back control
@@ -19,7 +19,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   const nav = document.createElement('nav');
   nav.className = 'pill';
   nav.setAttribute('aria-label', 'Primary');
-  const navEvents = button('Events', () => director.go(STATES.PAST_NIGHTS));
+  const navEvents = button('Events', () => director.go(STATES.NEXT_EVENT));
   const navContact = button('Contact', () => director.go(STATES.CONTACT));
 
   // sound toggle — reflects mute state
@@ -44,9 +44,8 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
 
   const links = [
     ['Next Event', STATES.NEXT_EVENT],
-    ['Past Nights', STATES.PAST_NIGHTS],
     ['Lineup', STATES.LINEUP],
-    ['The Album', STATES.ALBUM]
+    ['Contact', STATES.CONTACT]
   ];
   const menuButtons = new Map();
   for (const [label, state] of links) {
@@ -59,7 +58,10 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   const mark = document.createElement('div');
   mark.className = 'mark';
   mark.innerHTML =
-    '<b>ROOM <span class="nine">909</span></b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span><span class="sub">RHYTHM COMPOSER</span>';
+    '<b>ROOM <span class="nine">909</span></b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span>';
+  const rc = button('Rhythm Composer', () => popup.open());
+  rc.className = 'rc-link';
+  mark.appendChild(rc);
 
   // ---- step sequencer ----
   const seq = document.createElement('div');
@@ -81,6 +83,9 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   close.setAttribute('aria-label', 'Back to home');
   close.addEventListener('click', () => director.home());
 
+  // ---- Rhythm Composer popup (the TR-909 reference) ----
+  const popup = buildPopup();
+
   // ---- get tickets — visible on the front page ----
   const tickets = document.createElement('a');
   tickets.className = 'tickets';
@@ -92,7 +97,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, menu, mark, seq, close, tickets);
+  root.append(nav, menu, mark, seq, close, tickets, popup.el);
 
   // No intro gate: the music starts on the visitor's first real gesture
   // (click or key — the interactions browsers accept for audio unlock).
@@ -136,6 +141,44 @@ function button(label, onClick) {
   b.textContent = label;
   b.addEventListener('click', onClick);
   return b;
+}
+
+/**
+ * The Rhythm Composer popup — a small panel explaining the TR-909 the
+ * whole series is named for. Opens from the wordmark, closes on the X,
+ * Escape, or a click on the backdrop.
+ */
+function buildPopup() {
+  const el = document.createElement('div');
+  el.className = 'popup';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', 'Rhythm Composer');
+  el.innerHTML =
+    '<div class="popup-panel">' +
+    '<button type="button" class="popup-x" aria-label="Close">×</button>' +
+    '<div class="popup-eyebrow">Rhythm Composer</div>' +
+    '<div class="popup-mark">TR-<span class="nine">909</span></div>' +
+    '<p>Roland built the TR-909 in 1983 and discontinued it two years ' +
+    'later. It flopped. Then house and techno found it — its kick, its ' +
+    'open hi-hat, its sixteen steps became the spine of the music.</p>' +
+    '<p>ROOM 909 is built around that machine: one room, one sequencer, ' +
+    'sixteen steps a bar, analog in the air. The grid you are looking at ' +
+    'is the 909 — every tile is a step.</p>' +
+    '</div>';
+
+  const close = () => el.classList.remove('show');
+  const open = () => el.classList.add('show');
+
+  el.querySelector('.popup-x').addEventListener('click', close);
+  el.addEventListener('click', (e) => {
+    if (e.target === el) close();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
+
+  return { el, open, close };
 }
 function sep() {
   const s = document.createElement('span');

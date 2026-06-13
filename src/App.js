@@ -101,7 +101,7 @@ export class App {
     // per-section scatter seed: each section rotates the cloud into its
     // own arrangement, so section -> section is a visible swirl, not a
     // content swap. Lerped, so the swirl animates.
-    this._sectionIndex = { NEXT_EVENT: 1, PAST_NIGHTS: 2, LINEUP: 3, ALBUM: 4, CONTACT: 5 };
+    this._sectionIndex = { NEXT_EVENT: 1, LINEUP: 2, CONTACT: 3 };
     this._sectionSeed = 0;
     this._sectionSeedTarget = 0;
     this.director.onChange((state) => {
@@ -129,10 +129,13 @@ export class App {
     this.composer.setSize(w, h, this.dpr);
     this.footage.setAspect(aspect);
 
-    // tile counts: fewer on mobile, scaled to aspect, clamped to capacity
+    // Aim for a roughly constant on-screen tile size instead of a fixed
+    // row count, so phones don't get huge chunky tiles. Portrait screens
+    // (small min-edge) still get a denser grid than before.
     const isMobile = w < 720;
-    const rows = isMobile ? 12 : 20;
-    const cols = Math.round(rows * aspect);
+    const targetTilePx = isMobile ? 46 : 64; // smaller tiles on phones
+    const rows = Math.max(10, Math.min(this.grid.capRows, Math.round(h / targetTilePx)));
+    const cols = Math.max(6, Math.min(this.grid.capCols, Math.round(w / targetTilePx)));
 
     const { w: worldW, h: worldH } = this.cameraRig.worldSize();
     this.grid.layout(worldW, worldH, cols, rows);

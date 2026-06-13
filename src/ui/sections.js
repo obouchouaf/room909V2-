@@ -18,23 +18,10 @@ const CONTENT = {
     ],
     cta: ['Get Tickets', 'https://shotgun.live/'] // TODO: real ticket link
   },
-  [STATES.PAST_NIGHTS]: {
-    eyebrow: 'Past Nights',
-    title: 'The Archive',
-    lede: 'Where the machine has already been.',
-    cards: [
-      ['Vol. 008', 'Atlas Rooftop · May 2026'],
-      ['Vol. 007', 'Salt Warehouse · Mar 2026'],
-      ['Vol. 006', 'Palmeraie · Jan 2026'],
-      ['Vol. 005', 'Old Cinema · Nov 2025'],
-      ['Vol. 004', 'Tannery · Sep 2025'],
-      ['Vol. 003', 'Courtyard 9 · Jul 2025']
-    ]
-  },
   [STATES.LINEUP]: {
     eyebrow: 'Lineup',
     title: 'Lineup',
-    lede: 'The bill for Volume 909. Hover a name.',
+    lede: 'The bill for Volume 909. Move across a name.',
     lineup: [
       {
         name: 'AÏCHA',
@@ -82,22 +69,6 @@ const CONTENT = {
       }
     ]
   },
-  [STATES.ALBUM]: {
-    eyebrow: 'The Album',
-    title: 'Rhythm Composer',
-    lede: 'Nine tracks pressed from the room. Out soon.',
-    tracks: [
-      'Cold Start',
-      'Medina 4AM',
-      'Hi-Hat Prayer',
-      'Rust Hum',
-      'Ember Sequence',
-      'Closed Room',
-      'Atlas Static',
-      'Last Bar',
-      'Sunrise / 909'
-    ]
-  },
   [STATES.CONTACT]: {
     eyebrow: 'Contact',
     title: 'Say Less',
@@ -133,7 +104,7 @@ const MOSAIC_PALETTE = [
   ['#efe9dc', 2] //  rare cream highlight
 ];
 
-function makeMosaic(seedStr, initials) {
+function makeMosaic(seedStr, initials, cols = 16, rows = 10) {
   // tiny deterministic hash so the same artist always gets the same tiles
   let h = 2166136261;
   for (let i = 0; i < seedStr.length; i++) {
@@ -149,7 +120,9 @@ function makeMosaic(seedStr, initials) {
 
   const total = MOSAIC_PALETTE.reduce((s, [, w]) => s + w, 0);
   const mosaic = el('div', 'mosaic');
-  for (let i = 0; i < 12 * 7; i++) {
+  mosaic.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  const count = cols * rows;
+  for (let i = 0; i < count; i++) {
     let pick = rand() * total;
     let color = MOSAIC_PALETTE[0][0];
     for (const [c, w] of MOSAIC_PALETTE) {
@@ -161,10 +134,73 @@ function makeMosaic(seedStr, initials) {
     }
     const cell = el('i');
     cell.style.background = color;
+    // resolve in from a random tile, not row by row — feels like the
+    // scene's own mosaic snapping into focus
+    cell.style.animationDelay = `${(rand() * 0.45).toFixed(3)}s`;
     mosaic.appendChild(cell);
   }
   mosaic.appendChild(el('span', 'init', initials));
   return mosaic;
+}
+
+/**
+ * The lineup: not a tooltip box. A list of names on the left; moving across
+ * (or focusing) a name resolves that artist's mosaic portrait, bio and
+ * links into a full bleed "stage" on the right — the tiles snap into focus
+ * the way the background does under the cursor.
+ */
+function buildLineup(data) {
+  const wrap = el('div', 'lineup');
+  const names = el('ul', 'lineup-names');
+  const stage = el('div', 'lineup-stage');
+  stage.setAttribute('aria-live', 'polite');
+
+  const buttons = [];
+  const setActive = (i) => {
+    const a = data.lineup[i];
+    buttons.forEach((b, j) => b.setAttribute('aria-current', String(j === i)));
+
+    stage.innerHTML = '';
+    stage.appendChild(makeMosaic(a.name, a.initials));
+    const text = el('div', 'stage-text');
+    text.appendChild(el('div', 'stage-name', a.name));
+    text.appendChild(el('div', 'stage-time', a.time));
+    text.appendChild(el('p', 'stage-bio', a.bio));
+    if (a.links.length) {
+      const links = el('div', 'stage-links');
+      for (const [label, href] of a.links) {
+        const link = el('a', null, label);
+        link.href = href;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        links.appendChild(link);
+      }
+      text.appendChild(links);
+    }
+    stage.appendChild(text);
+    // restart the resolve animation
+    stage.classList.remove('resolve');
+    void stage.offsetWidth;
+    stage.classList.add('resolve');
+  };
+
+  data.lineup.forEach((artist, i) => {
+    const li = el('li');
+    const btn = el('button', 'lineup-name', artist.name);
+    btn.type = 'button';
+    btn.appendChild(el('span', 'lineup-time', artist.time));
+    btn.addEventListener('mouseenter', () => setActive(i));
+    btn.addEventListener('focus', () => setActive(i));
+    btn.addEventListener('click', () => setActive(i));
+    buttons.push(btn);
+    li.appendChild(btn);
+    names.appendChild(li);
+  });
+
+  wrap.appendChild(names);
+  wrap.appendChild(stage);
+  setActive(0);
+  return wrap;
 }
 
 function buildPanel(state, data) {
@@ -187,77 +223,7 @@ function buildPanel(state, data) {
     sec.appendChild(dl);
   }
 
-  if (data.cards) {
-    const ul = el('ul', 'cards');
-    for (const [name, when] of data.cards) {
-      const li = el('li');
-      li.appendChild(el('div', 'thumb'));
-      li.appendChild(el('div', 'label', `${name}<span>${when}</span>`));
-      ul.appendChild(li);
-    }
-    sec.appendChild(ul);
-  }
-
-  if (data.roster) {
-    const ul = el('ul', 'roster');
-    for (const [name, role] of data.roster) {
-      const li = el('li');
-      li.appendChild(el('span', 'name', name));
-      li.appendChild(el('span', 'role', role));
-      ul.appendChild(li);
-    }
-    sec.appendChild(ul);
-  }
-
-  if (data.lineup) {
-    const ul = el('ul', 'roster');
-    for (const artist of data.lineup) {
-      const li = el('li');
-      li.className = 'artist';
-
-      // the name is a button: hover shows the card on desktop, tap
-      // toggles it on touch, focus shows it for keyboard users
-      const btn = el('button', 'artist-btn', artist.name);
-      btn.type = 'button';
-      btn.setAttribute('aria-expanded', 'false');
-      btn.addEventListener('click', () => {
-        const open = li.classList.toggle('open');
-        btn.setAttribute('aria-expanded', String(open));
-      });
-
-      const card = el('div', 'artist-card');
-      card.appendChild(makeMosaic(artist.name, artist.initials));
-      card.appendChild(el('p', 'bio', artist.bio));
-      if (artist.links.length) {
-        const links = el('div', 'links');
-        for (const [label, href] of artist.links) {
-          const a = el('a', null, label);
-          a.href = href;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          links.appendChild(a);
-        }
-        card.appendChild(links);
-      }
-
-      li.appendChild(btn);
-      li.appendChild(el('span', 'role', artist.time));
-      li.appendChild(card);
-      ul.appendChild(li);
-    }
-    sec.appendChild(ul);
-  }
-
-  if (data.tracks) {
-    const ul = el('ul', 'tracks');
-    data.tracks.forEach((t, i) => {
-      const li = el('li');
-      li.appendChild(el('span', 'no', String(i + 1).padStart(2, '0')));
-      li.appendChild(el('span', 'title', t));
-      ul.appendChild(li);
-    });
-    sec.appendChild(ul);
-  }
+  if (data.lineup) sec.appendChild(buildLineup(data));
 
   if (data.cta) {
     // [label, href] -> link; plain string -> button

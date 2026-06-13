@@ -86,8 +86,11 @@ never breaks.
 
 ## Navigation
 
-- Left menu, pill nav, or wheel-scroll / vertical swipe to move through
-  HERO → NEXT EVENT → PAST NIGHTS → LINEUP → THE ALBUM → CONTACT.
+- Left menu, pill nav, or wheel-scroll / vertical swipe / arrow keys to
+  move through HERO → NEXT EVENT → LINEUP → CONTACT.
+- Lineup: moving across (or focusing) a name resolves that artist's
+  mosaic portrait, bio and links into a full-bleed stage.
+- The wordmark's RHYTHM COMPOSER opens a popup about the TR-909.
 - `Esc` or BACK returns to the hero.
 
 ## Quality
