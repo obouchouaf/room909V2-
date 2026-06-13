@@ -92,12 +92,10 @@ const VERT = /* glsl */ `
     float focus = spatial * uActive;
     vFocus = focus;
 
-    // the 909 reveal is a wide, soft spotlight following the cursor — any
-    // movement uncovers it across a large area, then it fades when idle
-    // (reduced motion shows a faint steady 909).
-    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.9, dist);
-    revFall = revFall * revFall * (3.0 - 2.0 * revFall);
-    vReveal = clamp(max(uActive * revFall * 1.5, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    // the 909 only flashes briefly on a deliberate cursor MOVE, then fades —
+    // it does not linger while the pointer simply rests over the tiles.
+    float vrev = smoothstep(0.14, 0.55, uVelocity);
+    vReveal = clamp(max(vrev, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
@@ -221,7 +219,7 @@ const FRAG = /* glsl */ `
 
     // trippy chromatic split — a slow wobble, stronger near the cursor and
     // pushed hard by cursor velocity (fast flicks smear the channels).
-    float ca = (0.004 + vFocus * 0.012) * (1.0 + uVelocity * 2.2)
+    float ca = (0.003 + vFocus * 0.006) * (1.0 + uVelocity * 1.2)
              * (0.6 + 0.4 * sin(uTime * 0.7 + vCellUV.x * 6.0));
     vec2 cao = vec2(ca, ca * 0.4);
     vec3 col;
@@ -229,16 +227,15 @@ const FRAG = /* glsl */ `
     col.g = texture2D(uMap, sampUV).g;
     col.b = texture2D(uMap, sampUV - cao).b;
 
-    // resolve sharpens the focused region — kept subtle so tiles don't glare
-    col *= 1.0 + vFocus * 0.12;
+    // (no hover brightening — the resolve sharpens via reduced scatter only,
+    // so tiles under the cursor don't glare)
 
-    // the 909 lives UNDER the tiles — invisible until the cursor scratches
-    // over it. We dim the surrounding tiles in the cursor zone and burn the
-    // glyph bright cream so it reads even over the orange footage.
-    float mark = texture2D(uMark, vFullUV).r;
-    col = mix(col, col * 0.45, vReveal * (1.0 - mark));        // dim the surround
-    col = mix(col, vec3(0.98, 0.93, 0.82), vReveal * mark);    // cream 909
-    col += uEmber * mark * vReveal * 0.5;                      // ember rim glow
+    // a small, centred 909 (sampled zoomed-out so it reads compact, not a
+    // billboard) flashes in cream on movement, then fades away
+    vec2 mruv = (vFullUV - 0.5) * 2.5 + 0.5;
+    float mark = texture2D(uMark, mruv).r;
+    col = mix(col, vec3(0.98, 0.93, 0.82), vReveal * mark);    // small cream 909
+    col += uEmber * mark * vReveal * 0.4;                      // ember rim
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
