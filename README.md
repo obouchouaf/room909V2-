@@ -91,12 +91,17 @@ never breaks.
 
 ## Navigation
 
-- Left menu, pill nav, or wheel-scroll / vertical swipe / arrow keys to
-  move through HERO → NEXT EVENT → LINEUP → CONTACT.
+- Bottom-centre nav bar (HOME · EVENT · LINEUP · CONTACT · SOUND), or
+  wheel-scroll / vertical swipe / arrow keys, to move through
+  HERO → NEXT EVENT → LINEUP → CONTACT. The active item gets an ember pill.
 - Lineup: moving across (or focusing) a name resolves that artist's
   mosaic portrait, bio and links into a full-bleed stage.
 - The wordmark's RHYTHM COMPOSER opens a popup about the TR-909.
-- `Esc` or BACK returns to the hero.
+- `Esc` returns to the hero.
+- Idle 909 attract: after ~5s untouched on the hero, the grid assembles
+  into a glowing 909, holds on the beat, reforms into a rotating word,
+  then releases. Any input interrupts and eases back. See
+  `core/AttractMode.js`.
 
 ## Quality
 

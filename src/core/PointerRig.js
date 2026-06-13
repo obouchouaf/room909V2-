@@ -23,6 +23,9 @@ export class PointerRig {
     this.world = new THREE.Vector3(0, 0, 0);
     // activity 0..1 — surges while the pointer moves, fades when it stops
     this.strength = 0;
+    // velocity 0..1 — smoothed speed of the pointer, amplifies every effect
+    this.velocity = 0;
+    this._prev = new THREE.Vector2(0, 0);
     this._lastMove = -1e9;
 
     // scratch — reused every frame
@@ -86,6 +89,7 @@ export class PointerRig {
       this.parallax.set(0, 0);
       this.world.set(0, 1.2, 0);
       this.strength = 0;
+      this.velocity = 0;
       return;
     }
 
@@ -93,6 +97,13 @@ export class PointerRig {
     // so the cursor reveal (and the 909) fades out when you stop
     const since = (performance.now() - this._lastMove) / 1000;
     this.strength = Math.max(0, 1 - since / 1.1);
+
+    // velocity: smoothed length of the per-frame pointer delta. Fast attack
+    // so quick flicks spike it, slow release so it trails off — faster
+    // movement = more displacement / rotation / scatter / chromatic split.
+    const inst = Math.min(1, this._ndc.distanceTo(this._prev) * 7);
+    this.velocity += (inst - this.velocity) * (inst > this.velocity ? 0.6 : 0.06);
+    this._prev.copy(this._ndc);
 
     // smooth the parallax signal
     this.parallax.x += (THREE.MathUtils.clamp(tx, -1, 1) - this.parallax.x) * damp;

@@ -3,11 +3,9 @@ import { buildSections } from './sections.js';
 
 /**
  * Builds the fixed UI chrome and wires it to the Director:
- *   - top-right pill nav (EVENTS / CONTACT / SOUND)
- *   - left menu (NEXT EVENT / LINEUP / CONTACT)
- *   - bottom-left wordmark
+ *   - bottom-centre nav bar (HOME / EVENT / LINEUP / CONTACT / SOUND)
+ *   - bottom-left wordmark (+ Rhythm Composer popup)
  *   - bottom-right 16-step sequencer (cells returned for the clock)
- *   - close/back control
  *   - the GET TICKETS pill (front page)
  *   - the section panels (via buildSections)
  *
@@ -15,44 +13,42 @@ import { buildSections } from './sections.js';
  * App reacts to state changes for the canvas transition.
  */
 export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
-  // ---- top-right pill nav ----
+  // ---- Rhythm Composer popup (the TR-909 reference) ----
+  const popup = buildPopup();
+
+  // ---- bottom-centre nav bar ----
   const nav = document.createElement('nav');
-  nav.className = 'pill';
+  nav.className = 'bar';
   nav.setAttribute('aria-label', 'Primary');
-  const navEvents = button('Events', () => director.go(STATES.NEXT_EVENT));
-  const navContact = button('Contact', () => director.go(STATES.CONTACT));
 
-  // sound toggle — reflects mute state
-  const sound = button('Sound: On', () => {
-    if (!audio) return;
-    const muted = audio.toggleMute();
-    sound.textContent = muted ? 'Sound: Off' : 'Sound: On';
-    sound.setAttribute('aria-pressed', String(!muted));
-  });
-  sound.setAttribute('aria-label', 'Toggle sound');
-
-  nav.append(navEvents, sep(), navContact, sep(), sound);
-
-  // ---- left menu ----
-  const menu = document.createElement('div');
-  menu.className = 'menu';
-  menu.setAttribute('aria-label', 'What brings you here');
-  const q = document.createElement('div');
-  q.className = 'q';
-  q.textContent = 'What brings you here?';
-  menu.appendChild(q);
-
-  const links = [
-    ['Next Event', STATES.NEXT_EVENT],
+  const navItems = [
+    ['Home', STATES.HERO],
+    ['Event', STATES.NEXT_EVENT],
     ['Lineup', STATES.LINEUP],
     ['Contact', STATES.CONTACT]
   ];
-  const menuButtons = new Map();
-  for (const [label, state] of links) {
+  const navButtons = new Map();
+  for (const [label, state] of navItems) {
     const b = button(label, () => director.go(state));
-    menuButtons.set(state, b);
-    menu.appendChild(b);
+    b.className = 'bar-item';
+    navButtons.set(state, b);
+    nav.appendChild(b);
   }
+
+  // sound toggle — circle indicator: filled when on, hollow when muted
+  const sound = button('', () => {
+    if (!audio) return;
+    const muted = audio.toggleMute();
+    reflectSound(muted);
+  });
+  sound.className = 'bar-item bar-sound';
+  sound.setAttribute('aria-label', 'Toggle sound');
+  const reflectSound = (muted) => {
+    sound.innerHTML = `Sound <span class="dot${muted ? ' off' : ''}"></span>`;
+    sound.setAttribute('aria-pressed', String(!muted));
+  };
+  reflectSound(audio ? audio.muted : false);
+  nav.appendChild(sound);
 
   // ---- wordmark (bottom-left, ROOM 909 reads clearly) ----
   const mark = document.createElement('div');
@@ -75,17 +71,6 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
     cells.push(c);
   }
 
-  // ---- close / back ----
-  const close = document.createElement('button');
-  close.type = 'button';
-  close.className = 'close';
-  close.innerHTML = '<span class="x">×</span> BACK';
-  close.setAttribute('aria-label', 'Back to home');
-  close.addEventListener('click', () => director.home());
-
-  // ---- Rhythm Composer popup (the TR-909 reference) ----
-  const popup = buildPopup();
-
   // ---- get tickets — visible on the front page ----
   const tickets = document.createElement('a');
   tickets.className = 'tickets';
@@ -97,7 +82,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, menu, mark, seq, close, tickets, popup.el);
+  root.append(nav, mark, seq, tickets, popup.el);
 
   // No intro gate: the music starts on the visitor's first real gesture
   // (click or key — the interactions browsers accept for audio unlock).
@@ -109,18 +94,17 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
     window.removeEventListener('keydown', firstGesture);
     if (onGyro) onGyro();
     if (onEnter) onEnter();
-    if (audio) sound.textContent = audio.muted ? 'Sound: Off' : 'Sound: On';
+    if (audio) reflectSound(audio.muted);
   };
   window.addEventListener('pointerdown', firstGesture);
   window.addEventListener('keydown', firstGesture);
 
-  // ---- react to state ----
+  // ---- react to state: highlight the active nav item ----
   function syncState(state) {
-    const isSection = director.isSection(state);
-    root.dataset.mode = isSection ? 'section' : 'hero';
-    close.classList.toggle('show', isSection);
-    sections.show(isSection ? state : null);
-    for (const [s, b] of menuButtons) {
+    root.dataset.mode = director.isSection(state) ? 'section' : 'hero';
+    sections.show(director.isSection(state) ? state : null);
+    for (const [s, b] of navButtons) {
+      b.classList.toggle('active', s === state);
       b.setAttribute('aria-current', s === state ? 'true' : 'false');
     }
   }
@@ -179,9 +163,4 @@ function buildPopup() {
   });
 
   return { el, open, close };
-}
-function sep() {
-  const s = document.createElement('span');
-  s.className = 'sep';
-  return s;
 }

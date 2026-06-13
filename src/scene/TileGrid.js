@@ -33,8 +33,11 @@ const VERT = /* glsl */ `
   uniform float uKick;         // 1 -> 0 on each detected kick in the music
   uniform float uAudio;        // smoothed bass level 0..1
   uniform float uActive;       // pointer activity 0..1 (decays when idle)
+  uniform float uVelocity;     // smoothed pointer speed 0..1 (amplifies all)
   uniform float uBaseReveal;   // reveal floor for reduced motion
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
+  uniform float uAttract;      // idle 909 attract animation 0..1
+  uniform sampler2D uMark;     // glyph mask (also used in the attract assemble)
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -91,24 +94,42 @@ const VERT = /* glsl */ `
     // reveal follows the cursor; reduced motion shows a faint steady 909
     vReveal = clamp(max(focus * 1.4, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
+    // faster movement amplifies everything — flicks feel kinetic
+    float amp = 1.0 + uVelocity * 1.9;
+
     // tilt the tile toward the cursor (rotates toward the camera)
     vec2 dir = uPointer.xy - center.xy;
     float dl = length(dir);
     dir = dl > 1e-4 ? dir / dl : vec2(0.0);
-    float tilt = focus * 1.15;
+    float tilt = focus * 1.15 * amp;
 
     vec3 local = position;
     local = rotX(-dir.y * tilt) * rotY(dir.x * tilt) * local;
+    // extra spin on fast moves for a psychedelic tumble
+    local = rotZ(focus * uVelocity * 1.2 * (aSeed.z - 0.5) * 4.0) * local;
 
     // --- depth --------------------------------------------------------
     float t = uReduced > 0.5 ? 0.0 : uTime;
     float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.05);  // slow idle float
     // idle float; collapses toward the plane under focus (image resolves)
     float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.95);
-    // focused tiles lift toward the camera — gentler so it's less "boxy"
-    float zFocus = focus * 1.7;
-    // a soft ripple ring chases the cursor for a liquid, alive feel
-    float ripple = sin(dist * 2.6 - t * 5.0) * focus * 0.4;
+    // focused tiles lift toward the camera, harder when moving fast
+    float zFocus = focus * 1.7 * amp;
+
+    // expanding ripple rings emanate from the cursor — like a stone dropped
+    // in z-space. Rings travel outward over time, so distant tiles get the
+    // displacement later. A wider falloff than the resolve so it carries.
+    float rfall = 1.0 - smoothstep(0.0, uFocusRadius * 2.4, dist);
+    float ringR = fract(t * 0.5) * uFocusRadius * 2.4;     // wavefront radius
+    float ring = exp(-pow((dist - ringR) * 1.7, 2.0));      // gaussian ring
+    float wave = sin(dist * 3.0 - t * 6.0) * 0.35;
+    float ripple = (ring * 0.9 + wave) * rfall * (0.35 + uVelocity) * uActive;
+
+    // fisheye lens: cluster tiles tight near the cursor centre, stretch the
+    // surrounding ring outward — a warp in the resolve zone
+    float rN = dist / max(uFocusRadius, 1e-3);
+    float lensPull = focus * (1.0 - clamp(rN, 0.0, 1.0));   // strong at centre
+    float lensPush = smoothstep(0.45, 1.1, rN) * focus * 0.5; // ring stretches
 
     // sequencer column pulse — the column flash rides the music's kick
     // (uKick is 1 on each detected onset; falls back to the step env)
@@ -141,9 +162,19 @@ const VERT = /* glsl */ `
     // --- assemble -----------------------------------------------------
     vec4 world = modelMatrix * instanceMatrix * vec4(local, 1.0);
     world.xyz += explode;
-    // light magnetism: tiles lean toward the cursor in the plane
-    world.xy += dir * focus * 0.3;
+    // fisheye lens: pull in near the cursor centre, push the ring outward
+    world.xy += dir * (focus * 0.3 + lensPull * 0.8) * amp;
+    world.xy -= dir * lensPush * amp;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
+
+    // --- idle 909 attract --------------------------------------------
+    // inside-glyph tiles surge forward into a bright plane; the rest fall
+    // back and scatter aside, so the 909 (or rotating word) assembles.
+    float inGlyph = texture2D(uMark, aCellUV).r;
+    float A = uAttract;
+    world.z += A * (inGlyph * 2.6 - (1.0 - inGlyph) * 7.0);
+    vec2 outward = normalize(center.xy + vec2(1e-4, 1e-4));
+    world.xy += A * (1.0 - inGlyph) * outward * 2.5;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -157,6 +188,9 @@ const FRAG = /* glsl */ `
   uniform vec3  uEmber;
   uniform float uTransition;
   uniform float uTime;
+  uniform float uVelocity;     // pointer speed 0..1
+  uniform float uAttract;      // idle attract 0..1
+  uniform float uAttractPulse; // beat pulse during the attract hold
 
   varying vec2  vCellUV;
   varying vec2  vFullUV;
@@ -174,12 +208,14 @@ const FRAG = /* glsl */ `
     // region — the mosaic is scattered. Focus pulls the sample home, so
     // the image resolves sharply under the cursor (the core trick).
     vec2 jitter = (vec2(hash(vCellUV * 53.0), hash(vCellUV * 91.0)) - 0.5);
-    float scatter = (1.0 - vFocus) * (0.22 + uTransition * 0.10);
+    // scatter grows with how fast the cursor is moving, too
+    float scatter = (1.0 - vFocus) * (0.22 + uTransition * 0.10) + vFocus * uVelocity * 0.06;
     vec2 sampUV = vCellUV + jitter * scatter;
 
-    // a touch of trippy chromatic split — a slow wobble, stronger near the
-    // cursor. Restrained: it shimmers, it doesn't smear.
-    float ca = (0.004 + vFocus * 0.010) * (0.6 + 0.4 * sin(uTime * 0.7 + vCellUV.x * 6.0));
+    // trippy chromatic split — a slow wobble, stronger near the cursor and
+    // pushed hard by cursor velocity (fast flicks smear the channels).
+    float ca = (0.004 + vFocus * 0.012) * (1.0 + uVelocity * 2.2)
+             * (0.6 + 0.4 * sin(uTime * 0.7 + vCellUV.x * 6.0));
     vec2 cao = vec2(ca, ca * 0.4);
     vec3 col;
     col.r = texture2D(uMap, sampUV + cao).r;
@@ -209,6 +245,13 @@ const FRAG = /* glsl */ `
     // dim the scattered cloud so section text stays readable over it
     col *= 1.0 - uTransition * 0.5;
 
+    // idle 909 attract: everything fades to near-black except the glyph,
+    // which burns ember and pulses on the beat during the hold
+    float glyphA = texture2D(uMark, vFullUV).r;
+    vec3 lit = mix(col * 0.05, uEmber, glyphA);
+    lit += vec3(1.0, 0.6, 0.25) * glyphA * (0.45 + uAttractPulse * 0.7);
+    col = mix(col, lit, uAttract);
+
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -222,6 +265,10 @@ export class TileGrid {
 
     // thin box — real depth so edges catch light when tilted
     const geo = new THREE.BoxGeometry(1, 1, 0.12);
+
+    // the glyph mask: "909" for the cursor scratch, swapped to words by the
+    // idle attract animation
+    this._mark = makeMark();
 
     this.uniforms = {
       uTime: { value: 0 },
@@ -237,11 +284,14 @@ export class TileGrid {
       uKick: { value: 0 },
       uAudio: { value: 0 },
       uActive: { value: 0 },
+      uVelocity: { value: 0 },
       uBaseReveal: { value: reduced ? 0.28 : 0 },
       uCellSize: { value: new THREE.Vector2(0.05, 0.05) },
+      uAttract: { value: 0 },
+      uAttractPulse: { value: 0 },
       uReduced: { value: reduced ? 1 : 0 },
       uMap: { value: null },
-      uMark: { value: makeMarkTexture() },
+      uMark: { value: this._mark.texture },
       uEmber: { value: new THREE.Color(0xff5c00) }
     };
 
@@ -328,16 +378,25 @@ export class TileGrid {
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
   }
 
-  update(time, pointerWorld, step, env, transition, sectionSeed, kick, audioLevel, active) {
-    this.uniforms.uTime.value = time;
-    this.uniforms.uPointer.value.copy(pointerWorld);
-    this.uniforms.uStep.value = step;
-    this.uniforms.uStepEnv.value = env;
-    this.uniforms.uTransition.value = transition;
-    this.uniforms.uSectionSeed.value = sectionSeed;
-    this.uniforms.uKick.value = kick;
-    this.uniforms.uAudio.value = audioLevel;
-    this.uniforms.uActive.value = active;
+  /** swap the glyph mask text (used by the idle attract animation). */
+  setMarkText(text) {
+    this._mark.setText(text);
+  }
+
+  update(opts) {
+    const u = this.uniforms;
+    u.uTime.value = opts.time;
+    u.uPointer.value.copy(opts.pointerWorld);
+    u.uStep.value = opts.step;
+    u.uStepEnv.value = opts.env;
+    u.uTransition.value = opts.transition;
+    u.uSectionSeed.value = opts.sectionSeed;
+    u.uKick.value = opts.kick;
+    u.uAudio.value = opts.audioLevel;
+    u.uActive.value = opts.active;
+    u.uVelocity.value = opts.velocity;
+    u.uAttract.value = opts.attract;
+    u.uAttractPulse.value = opts.attractPulse;
   }
 
   dispose() {
@@ -346,35 +405,45 @@ export class TileGrid {
   }
 }
 
-/** Draw "909" once to a canvas → texture used as the hidden mask. */
-function makeMarkTexture() {
+/**
+ * The glyph mask: a canvas drawn with text, sized to nearly fill the frame
+ * so it reads across the whole mosaic. Returns the texture plus a setText()
+ * the attract animation uses to rotate through "909" and the idle words.
+ */
+function makeMark() {
   const c = document.createElement('canvas');
   c.width = 1024;
   c.height = 512;
   const g = c.getContext('2d');
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  let current = '909';
 
-  const draw = () => {
+  const draw = (text) => {
+    current = text;
     g.fillStyle = '#000';
     g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = '#fff';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    // size the glyph to nearly fill the frame so scratching anywhere
-    // across the mosaic reveals part of the 909
     let size = 520;
     g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-    while (g.measureText('909').width > c.width * 0.92 && size > 40) {
-      size -= 10;
+    while (g.measureText(text).width > c.width * 0.9 && size > 24) {
+      size -= 8;
       g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
     }
-    g.fillText('909', c.width / 2, c.height / 2 + 18);
+    g.fillText(text, c.width / 2, c.height / 2 + 14);
     tex.needsUpdate = true;
   };
-  draw();
+
+  draw('909');
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(draw).catch(() => {});
+    document.fonts.ready.then(() => draw(current)).catch(() => {});
   }
-  return tex;
+  return {
+    texture: tex,
+    setText: (text) => {
+      if (text !== current) draw(text);
+    }
+  };
 }

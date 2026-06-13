@@ -5,6 +5,8 @@ import { Director } from './core/Director.js';
 import { PointerRig } from './core/PointerRig.js';
 import { Audio909 } from './core/Audio909.js';
 import { SwipeNav } from './core/SwipeNav.js';
+import { AttractMode } from './core/AttractMode.js';
+import { STATES } from './core/Director.js';
 
 import { FootageTexture } from './scene/FootageTexture.js';
 import { TileGrid } from './scene/TileGrid.js';
@@ -76,6 +78,15 @@ export class App {
     // ---- swipe / scroll between sections ----
     this.swipe = new SwipeNav(this.director);
     this.swipe.enable();
+
+    // ---- idle 909 attract animation ----
+    this.attract = new AttractMode(this.grid, { idle: 5, reduced: this.reduced });
+    // any wheel / key / pointer gesture counts as interaction (resets idle)
+    this._lastInteract = 0;
+    const bump = () => { this._lastInteract = performance.now(); };
+    window.addEventListener('wheel', bump, { passive: true });
+    window.addEventListener('keydown', bump);
+    window.addEventListener('pointerdown', bump);
 
     // ---- UI ----
     const { cells } = buildLayout(ui, this.director, {
@@ -171,21 +182,35 @@ export class App {
     // input
     this.pointer.tick(this.reduced ? 1 : Math.min(1, dt * 6));
 
+    // idle 909 attract — eligible only on HERO with no recent interaction
+    const interacting =
+      this.pointer.strength > 0.02 ||
+      this.pointer.velocity > 0.02 ||
+      performance.now() - this._lastInteract < 220;
+    this.attract.update(dt, {
+      hero: this.director.state === STATES.HERO,
+      interacting,
+      kick: this.reduced ? 0 : this.audio.kick
+    });
+
     // footage stays alive
     this.footage.update(time);
 
     // grid + camera
-    this.grid.update(
+    this.grid.update({
       time,
-      this.pointer.world,
-      this.clock.step,
-      this.clock.env,
-      this._transition,
-      this._sectionSeed,
-      this.reduced ? 0 : this.audio.kick,
-      this.reduced ? 0 : this.audio.level,
-      this.pointer.strength
-    );
+      pointerWorld: this.pointer.world,
+      step: this.clock.step,
+      env: this.clock.env,
+      transition: this._transition,
+      sectionSeed: this._sectionSeed,
+      kick: this.reduced ? 0 : this.audio.kick,
+      audioLevel: this.reduced ? 0 : this.audio.level,
+      active: this.pointer.strength,
+      velocity: this.reduced ? 0 : this.pointer.velocity,
+      attract: this.attract.value,
+      attractPulse: this.attract.pulse
+    });
     this.cameraRig.update(this.pointer.parallax, this.reduced ? 1 : Math.min(1, dt * 3), this._transition);
 
     // render
