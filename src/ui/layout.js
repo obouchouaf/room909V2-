@@ -8,7 +8,7 @@ import { buildSections } from './sections.js';
  *   - bottom-left wordmark
  *   - bottom-right 16-step sequencer (cells returned for the clock)
  *   - close/back control
- *   - the ENTER intro gate (unlocks audio + gyro)
+ *   - the GET TICKETS pill (front page)
  *   - the section panels (via buildSections)
  *
  * Everything is real, focusable DOM. Navigation flips Director state; the
@@ -23,10 +23,10 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   const navContact = button('Contact', () => director.go(STATES.CONTACT));
 
   // sound toggle — reflects mute state
-  const sound = button('Sound ●', () => {
+  const sound = button('Sound: On', () => {
     if (!audio) return;
     const muted = audio.toggleMute();
-    sound.textContent = muted ? 'Sound ○' : 'Sound ●';
+    sound.textContent = muted ? 'Sound: Off' : 'Sound: On';
     sound.setAttribute('aria-pressed', String(!muted));
   });
   sound.setAttribute('aria-label', 'Toggle sound');
@@ -81,37 +81,33 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   close.setAttribute('aria-label', 'Back to home');
   close.addEventListener('click', () => director.home());
 
+  // ---- get tickets — visible on the front page ----
+  const tickets = document.createElement('a');
+  tickets.className = 'tickets';
+  tickets.href = 'https://shotgun.live/'; // TODO: real ticket link
+  tickets.target = '_blank';
+  tickets.rel = 'noopener noreferrer';
+  tickets.textContent = 'GET TICKETS';
+
   // ---- sections ----
   const sections = buildSections(root);
 
-  // ---- ENTER intro ----
-  // Covers the scene until the visitor clicks in. The click is the user
-  // gesture that unlocks audio + gyroscope. The grid runs dimly behind it.
-  const intro = document.createElement('div');
-  intro.className = 'intro';
-  intro.innerHTML =
-    '<div class="intro-mark">ROOM <span class="nine">909</span></div>' +
-    '<div class="intro-sub">MARRAKECH · RHYTHM COMPOSER</div>' +
-    '<button type="button" class="enter" aria-label="Enter Room 909">ENTER</button>';
-  const enterBtn = intro.querySelector('.enter');
+  root.append(nav, menu, mark, seq, close, tickets);
 
+  // No intro gate: the music starts on the visitor's first real gesture
+  // (click or key — the interactions browsers accept for audio unlock).
   let entered = false;
-  const doEnter = () => {
+  const firstGesture = () => {
     if (entered) return;
     entered = true;
-    intro.classList.add('gone');
+    window.removeEventListener('pointerdown', firstGesture);
+    window.removeEventListener('keydown', firstGesture);
     if (onGyro) onGyro();
     if (onEnter) onEnter();
-    // reflect playing state on the sound control
-    if (audio) sound.textContent = audio.muted ? 'Sound ○' : 'Sound ●';
-    window.setTimeout(() => intro.remove(), 900);
+    if (audio) sound.textContent = audio.muted ? 'Sound: Off' : 'Sound: On';
   };
-  enterBtn.addEventListener('click', doEnter);
-
-  root.append(nav, menu, mark, seq, close, intro);
-
-  // focus the ENTER button so keyboard users can press Enter/Space
-  requestAnimationFrame(() => enterBtn.focus());
+  window.addEventListener('pointerdown', firstGesture);
+  window.addEventListener('keydown', firstGesture);
 
   // ---- react to state ----
   function syncState(state) {

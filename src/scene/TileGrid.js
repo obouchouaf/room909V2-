@@ -64,10 +64,18 @@ const VERT = /* glsl */ `
     vec3 center = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
     // --- cursor focus -------------------------------------------------
-    // smooth, generous falloff so the cursor's pull on the image is felt
+    // smooth, generous falloff so the cursor's pull on the image is felt.
+    // Per-tile randomness: every tile answers the cursor with its own
+    // sensitivity and a slow personal flicker, so the response feels
+    // organic rather than a perfect radial stamp.
+    float t0 = uReduced > 0.5 ? 0.0 : uTime;
+    float gain = mix(0.6, 1.35, hash(aSeed.xy * 19.0));
+    float flick = 0.82 + 0.18 * sin(t0 * (0.7 + aSeed.z * 2.4) + aSeed.x * 6.2831);
+
     float dist  = distance(center.xy, uPointer.xy);
-    float focus = 1.0 - smoothstep(0.0, uFocusRadius, dist);  // 1 near cursor
+    float focus = 1.0 - smoothstep(0.0, uFocusRadius * gain, dist); // 1 near cursor
     focus = focus * focus * (3.0 - 2.0 * focus);              // ease it
+    focus = clamp(focus * flick, 0.0, 1.0);
     focus *= (1.0 - uTransition);                             // no focus mid-section
     vFocus = focus;
 

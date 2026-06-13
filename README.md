@@ -70,8 +70,8 @@ window.__room909.grid.setMap(new THREE.VideoTexture(video));
 
 ## Music
 
-The site opens behind an ENTER gate; clicking in starts `public/room909.mp3`
-(looped) — the user gesture that satisfies browser autoplay rules. While the
+`public/room909.mp3` (looped) starts on the visitor's first click or
+keypress — the gesture browsers require for audio. While the
 track plays, a Web Audio `AnalyserNode` listens to the low end: detected
 kicks phase-align the 16-step grid to the actual beat (not just the clock),
 retrigger the column flash, and bump a random scattering of tiles with an

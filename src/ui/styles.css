@@ -402,67 +402,136 @@ nav.pill .sep {
   opacity: 0.4;
 }
 
-/* ---- ENTER intro ---- */
-.intro {
+/* ---- GET TICKETS — front and center ---- */
+.tickets {
   position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  pointer-events: auto;
-  background: radial-gradient(
-    circle at 50% 45%,
-    rgba(20, 18, 16, 0.55),
-    rgba(20, 18, 16, 0.92) 70%
-  );
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  transition: opacity 0.85s var(--ease);
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 13px 32px;
+  border: 1px solid var(--ember);
+  border-radius: 999px;
+  background: rgba(20, 18, 16, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--ember);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.25s var(--ease), color 0.25s var(--ease),
+    box-shadow 0.25s var(--ease), opacity 0.4s var(--ease);
 }
-.intro.gone {
+.tickets:hover,
+.tickets:focus-visible {
+  background: var(--ember);
+  color: var(--charcoal);
+  box-shadow: 0 0 28px rgba(255, 92, 0, 0.55);
+}
+/* sections have their own CTA — keep the hero clean of duplicates */
+.ui[data-mode='section'] .tickets {
   opacity: 0;
   pointer-events: none;
 }
-.intro-mark {
-  font-size: clamp(40px, 11vw, 120px);
-  letter-spacing: 0.22em;
-  color: var(--cream);
-  text-transform: uppercase;
-  text-shadow: 0 0 40px rgba(255, 92, 0, 0.45);
-  text-indent: 0.22em;
+
+/* ---- lineup artist hover cards ---- */
+.roster li.artist {
+  position: relative;
 }
-.intro-mark .nine {
+.artist-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cream);
+  cursor: pointer;
+  transition: color 0.2s var(--ease);
+}
+.artist-btn::after {
+  content: ' +';
+  color: var(--ember);
+  opacity: 0.6;
+}
+.artist-btn:hover {
   color: var(--ember);
 }
-.intro-sub {
+.artist-card {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 12px);
+  width: min(320px, 78vw);
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: rgba(20, 18, 16, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 6;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
+    visibility 0s linear 0.3s;
+}
+.roster li.artist:hover .artist-card,
+.roster li.artist:focus-within .artist-card,
+.roster li.artist.open .artist-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
+    visibility 0s linear 0s;
+}
+
+/* the artist "portrait": a mini mosaic in the site's own language */
+.mosaic {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2px;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 11px;
+}
+.mosaic i {
+  display: block;
+}
+.mosaic .init {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--cream);
+  text-shadow: 0 0 18px rgba(255, 92, 0, 0.6);
+}
+.artist-card .bio {
   font-size: 11px;
-  letter-spacing: 0.34em;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
   color: var(--dim);
   text-transform: uppercase;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
-.enter {
-  margin-top: 6px;
-  padding: 14px 40px;
-  border: 1px solid var(--ember);
-  border-radius: 999px;
-  background: none;
+.artist-card .links {
+  display: flex;
+  gap: 16px;
+}
+.artist-card .links a {
   color: var(--ember);
-  font-size: 12px;
-  letter-spacing: 0.34em;
+  font-size: 10px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.25s var(--ease), color 0.25s var(--ease),
-    box-shadow 0.25s var(--ease);
+  text-decoration: none;
 }
-.enter:hover,
-.enter:focus-visible {
-  background: var(--ember);
-  color: var(--charcoal);
-  box-shadow: 0 0 30px rgba(255, 92, 0, 0.5);
+.artist-card .links a:hover {
+  color: var(--cream);
 }
 
 /* ---- responsive ---- */
@@ -500,6 +569,28 @@ nav.pill .sep {
     top: 14px;
     left: 14px;
   }
+  /* bottom-right is free on mobile (the sequencer moves bottom-left) */
+  .tickets {
+    left: auto;
+    right: 18px;
+    bottom: 18px;
+    transform: none;
+    padding: 12px 22px;
+  }
+  .artist-card {
+    position: fixed;
+    left: 7vw;
+    right: 7vw;
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto;
+  }
+  .roster li.artist:hover .artist-card,
+  .roster li.artist:focus-within .artist-card,
+  .roster li.artist.open .artist-card {
+    transform: translateY(-50%);
+  }
 }
 
 /* ---- reduced motion ---- */
@@ -509,8 +600,8 @@ nav.pill .sep {
   .menu button,
   .section,
   .cta,
-  .intro,
-  .enter,
+  .tickets,
+  .artist-card,
   nav.pill button {
     transition: none !important;
   }

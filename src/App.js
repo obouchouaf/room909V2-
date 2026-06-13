@@ -75,15 +75,13 @@ export class App {
 
     // ---- swipe / scroll between sections ----
     this.swipe = new SwipeNav(this.director);
+    this.swipe.enable();
 
     // ---- UI ----
     const { cells } = buildLayout(ui, this.director, {
       onGyro: () => this.pointer.requestGyro(),
       audio: this.audio,
-      onEnter: () => {
-        this.audio.start();
-        this.swipe.enable();
-      }
+      onEnter: () => this.audio.start()
     });
     this.cells = cells;
 

@@ -32,6 +32,7 @@ const FRAG = /* glsl */ `
   uniform float uTime;
   uniform float uAspect;
   uniform float uReduced;
+  uniform sampler2D uMark;   // "909" glyph mask, drawn once on a canvas
 
   float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
   float noise(vec2 p){
@@ -73,6 +74,13 @@ const FRAG = /* glsl */ `
                * smoothstep(1.2, 0.2, p.y + 1.0);
     col += cream * beam * 0.04;
 
+    // a 909 hidden in the smoke — barely there, breathing in and out,
+    // shaped by the same noise so it never reads as an overlay
+    vec2 muv = vec2((vUv.x - 0.5) * uAspect, vUv.y - 0.5) * 1.05 + 0.5;
+    float mark = texture2D(uMark, muv).r;
+    float breathe = 0.5 + 0.5 * sin(t * 0.09);
+    col += ember * mark * n * (0.05 + 0.06 * breathe);
+
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -97,7 +105,8 @@ export class FootageTexture {
     this.uniforms = {
       uTime: { value: 0 },
       uAspect: { value: 1 },
-      uReduced: { value: reduced ? 1 : 0 }
+      uReduced: { value: reduced ? 1 : 0 },
+      uMark: { value: this._makeMarkTexture() }
     };
 
     const mat = new THREE.ShaderMaterial({
@@ -115,6 +124,33 @@ export class FootageTexture {
   /** the texture the grid samples. */
   get texture() {
     return this.target.texture;
+  }
+
+  /** draw "909" once to a canvas; redrawn when the brand font arrives. */
+  _makeMarkTexture() {
+    const c = document.createElement('canvas');
+    c.width = 1024;
+    c.height = 512;
+    const g = c.getContext('2d');
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+
+    const draw = () => {
+      g.fillStyle = '#000';
+      g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = '#fff';
+      g.font = '380px "Share Tech Mono", ui-monospace, monospace';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText('909', c.width / 2, c.height / 2 + 20);
+      tex.needsUpdate = true;
+      this._staticDone = false; // re-render the static frame (reduced motion)
+    };
+    draw();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(draw).catch(() => {});
+    }
+    return tex;
   }
 
   setAspect(aspect) {
