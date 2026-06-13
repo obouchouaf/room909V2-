@@ -29,6 +29,7 @@ const CONTENT = {
         name: 'FRAUSARP',
         time: '23:00 — 01:30',
         initials: 'FR',
+        photo: '/frausarp.jpg',
         bio: 'Opens the room. Patient, hypnotic builds that set the night in motion before the close.',
         links: []
       },
@@ -117,24 +118,110 @@ function makeMosaic(seedStr, initials, cols = 16, rows = 10) {
 }
 
 /**
- * Artist portrait: a real photo when one is provided (toned into the brand
- * with a charcoal/ember overlay), otherwise the generated mosaic. If the
- * photo fails to load it falls back to the mosaic automatically.
+ * Artist portrait, rendered in the site's own language: the photo is
+ * rebuilt as a grid of "9" / "0" glyphs coloured by brightness in the brand
+ * palette (charcoal → rust → ember → cream), resolving in cell by cell —
+ * inspired by 909.nl but in ROOM 909's particle idiom. Falls back to the
+ * generated mosaic if no photo is set or it fails to load.
  */
+const PORTRAIT_COLS = 80;
+const PORTRAIT_ROWS = 50;
+const PORTRAIT_CELL = 13;
+
+function portraitColor(l) {
+  // luminance 0..1 → brand palette
+  if (l < 0.1) return null; //              charcoal — leave as background
+  if (l < 0.26) return '#3a1606'; //        deep rust
+  if (l < 0.44) return '#732103'; //        rust
+  if (l < 0.62) return '#b23c06'; //        rust → ember
+  if (l < 0.8) return '#ff5c00'; //         ember
+  return '#efe9dc'; //                      cream highlight
+}
+
 function makePortrait(a) {
   if (!a.photo) return makeMosaic(a.name, a.initials);
 
   const wrap = el('div', 'portrait');
-  const img = document.createElement('img');
-  img.src = a.photo;
-  img.alt = a.name;
-  img.loading = 'lazy';
+  const canvas = document.createElement('canvas');
+  canvas.width = PORTRAIT_COLS * PORTRAIT_CELL;
+  canvas.height = PORTRAIT_ROWS * PORTRAIT_CELL;
+  wrap.appendChild(canvas);
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.decoding = 'async';
-  img.addEventListener('error', () => {
-    wrap.replaceWith(makeMosaic(a.name, a.initials));
+  img.addEventListener('error', () => wrap.replaceWith(makeMosaic(a.name, a.initials)));
+  img.addEventListener('load', () => {
+    try {
+      renderGlyphPortrait(canvas, img);
+    } catch (_) {
+      wrap.replaceWith(makeMosaic(a.name, a.initials));
+    }
   });
-  wrap.appendChild(img);
+  img.src = a.photo;
   return wrap;
+}
+
+function renderGlyphPortrait(canvas, img) {
+  const cols = PORTRAIT_COLS;
+  const rows = PORTRAIT_ROWS;
+  const cell = PORTRAIT_CELL;
+
+  // downsample the photo (object-fit: cover) into cols x rows
+  const small = document.createElement('canvas');
+  small.width = cols;
+  small.height = rows;
+  const sg = small.getContext('2d');
+  const ar = img.width / img.height;
+  const target = cols / rows;
+  let sw = img.width;
+  let sh = img.height;
+  let sx = 0;
+  let sy = 0;
+  if (ar > target) {
+    sw = img.height * target;
+    sx = (img.width - sw) / 2;
+  } else {
+    sh = img.width / target;
+    sy = (img.height - sh) / 2;
+  }
+  sg.drawImage(img, sx, sy, sw, sh, 0, 0, cols, rows);
+  const data = sg.getImageData(0, 0, cols, rows).data;
+
+  // build the visible cell list (skip near-black so the face floats)
+  const cells = [];
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const i = (y * cols + x) * 4;
+      const l = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
+      const color = portraitColor(l);
+      if (!color) continue;
+      const ch = (x * 7 + y * 13 + Math.round(l * 9)) % 3 === 0 ? '0' : '9';
+      cells.push({ x, y, color, ch, ord: Math.random() });
+    }
+  }
+
+  const ctx = canvas.getContext('2d');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${cell}px "Share Tech Mono", ui-monospace, monospace`;
+
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dur = 700;
+  const start = performance.now();
+
+  const frame = (now) => {
+    const p = reduced ? 1 : Math.min(1, (now - start) / dur);
+    ctx.fillStyle = '#141210';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (const c of cells) {
+      if (c.ord > p) continue; // staggered resolve
+      ctx.fillStyle = c.color;
+      ctx.fillText(c.ch, (c.x + 0.5) * cell, (c.y + 0.5) * cell);
+    }
+    if (p < 1) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
 
 /**
