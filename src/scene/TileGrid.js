@@ -179,6 +179,9 @@ const VERT = /* glsl */ `
     world.xy += dir * (focus * 0.2 + lensPull * 0.5) * amp;
     world.xy -= dir * lensPush * amp;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
+    // whole grid breathes forward on every detected kick — the scene pulses
+    // in time with the music's low end
+    world.z += uKick * (0.18 + aSeed.x * 0.25);
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -193,6 +196,7 @@ const FRAG = /* glsl */ `
   uniform float uTransition;
   uniform float uTime;
   uniform float uVelocity;     // pointer speed 0..1
+  uniform float uKick;         // 1 -> 0 on each detected kick
   uniform float uAttract;      // idle attract 0..1
   uniform float uAttractPulse; // beat pulse during the attract hold
 
@@ -242,6 +246,8 @@ const FRAG = /* glsl */ `
     col += uEmber * vPulse * 0.6;
     // music-reactive tiles glow softly on the kick
     col += uEmber * vReact * 0.28;
+    // and the whole grid lifts a touch on the kick (synced to the music)
+    col *= 1.0 + uKick * 0.06;
 
     // very faint tile seams — present but not a hard grid, so the mosaic
     // reads as one image rather than a wall of boxes
