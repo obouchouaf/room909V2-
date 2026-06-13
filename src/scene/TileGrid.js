@@ -82,17 +82,22 @@ const VERT = /* glsl */ `
     float flick = 0.78 + 0.22 * sin(t0 * (0.8 + aSeed.z * 2.8) + aSeed.x * 6.2831);
 
     float dist  = distance(center.xy, uPointer.xy);
-    float focus = 1.0 - smoothstep(0.0, uFocusRadius * gain, dist); // 1 near cursor
-    focus = focus * focus * (3.0 - 2.0 * focus);              // ease it
-    focus = clamp(focus * flick, 0.0, 1.0);
-    focus *= (1.0 - uTransition);                             // no focus mid-section
+    float spatial = 1.0 - smoothstep(0.0, uFocusRadius * gain, dist); // 1 near cursor
+    spatial = spatial * spatial * (3.0 - 2.0 * spatial);      // ease it
+    spatial = clamp(spatial * flick, 0.0, 1.0);
+    spatial *= (1.0 - uTransition);                           // no focus mid-section
 
-    // gate the whole interaction on pointer activity: it surges while the
-    // cursor moves and fades when it stops — the 909 appears, then hides.
-    focus *= uActive;
+    // gate the 3D resolve on pointer activity: it surges while the cursor
+    // moves and fades when it stops.
+    float focus = spatial * uActive;
     vFocus = focus;
-    // reveal follows the cursor; reduced motion shows a faint steady 909
-    vReveal = clamp(max(focus * 1.7, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+
+    // the 909 reveal is a wide, soft spotlight following the cursor — any
+    // movement uncovers it across a large area, then it fades when idle
+    // (reduced motion shows a faint steady 909).
+    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.9, dist);
+    revFall = revFall * revFall * (3.0 - 2.0 * revFall);
+    vReveal = clamp(max(uActive * revFall * 1.5, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
@@ -224,15 +229,14 @@ const FRAG = /* glsl */ `
     col.g = texture2D(uMap, sampUV).g;
     col.b = texture2D(uMap, sampUV - cao).b;
 
-    // resolve brightens the focused region and warms it
-    col *= 1.0 + vFocus * 0.35;
-    col += uEmber * vFocus * 0.07;
+    // resolve sharpens the focused region — kept subtle so tiles don't glare
+    col *= 1.0 + vFocus * 0.12;
 
     // the 909 lives UNDER the tiles — invisible until the cursor scratches
     // over it. We dim the surrounding tiles in the cursor zone and burn the
     // glyph bright cream so it reads even over the orange footage.
     float mark = texture2D(uMark, vFullUV).r;
-    col = mix(col, col * 0.28, vReveal * (1.0 - mark));        // darken surround
+    col = mix(col, col * 0.45, vReveal * (1.0 - mark));        // dim the surround
     col = mix(col, vec3(0.98, 0.93, 0.82), vReveal * mark);    // cream 909
     col += uEmber * mark * vReveal * 0.5;                      // ember rim glow
 
