@@ -119,23 +119,37 @@ function makeMosaic(seedStr, initials, cols = 16, rows = 10) {
 
 /**
  * Artist portrait, rendered in the site's own language: the photo is
- * rebuilt as a grid of "9" / "0" glyphs coloured by brightness in the brand
- * palette (charcoal → rust → ember → cream), resolving in cell by cell —
- * inspired by 909.nl but in ROOM 909's particle idiom. Falls back to the
- * generated mosaic if no photo is set or it fails to load.
+ * rebuilt as a grid of palette-toned particle tiles (charcoal → rust →
+ * ember → cream), near-black left as background so the face floats. The
+ * tiles resolve in, breathe with a subtle idle shimmer, and respond to the
+ * cursor exactly like the home-page grid — clean image, live particles.
  */
-const PORTRAIT_COLS = 80;
-const PORTRAIT_ROWS = 50;
-const PORTRAIT_CELL = 13;
+const PORTRAIT_COLS = 104;
+const PORTRAIT_ROWS = 66;
+const PORTRAIT_CELL = 10;
 
-function portraitColor(l) {
-  // luminance 0..1 → brand palette
-  if (l < 0.1) return null; //              charcoal — leave as background
-  if (l < 0.26) return '#3a1606'; //        deep rust
-  if (l < 0.44) return '#732103'; //        rust
-  if (l < 0.62) return '#b23c06'; //        rust → ember
-  if (l < 0.8) return '#ff5c00'; //         ember
-  return '#efe9dc'; //                      cream highlight
+// luminance 0..1 → an interpolated point along the brand ramp
+const PORTRAIT_RAMP = [
+  [0.0, [20, 18, 16]], //   charcoal
+  [0.32, [60, 18, 4]], //   rust
+  [0.52, [150, 46, 6]], //  rust → ember
+  [0.74, [255, 92, 0]], //  ember
+  [1.0, [239, 233, 220]] // cream
+];
+function rampColor(l) {
+  for (let i = 1; i < PORTRAIT_RAMP.length; i++) {
+    if (l <= PORTRAIT_RAMP[i][0]) {
+      const [a0, c0] = PORTRAIT_RAMP[i - 1];
+      const [a1, c1] = PORTRAIT_RAMP[i];
+      const t = (l - a0) / (a1 - a0 || 1);
+      return [
+        c0[0] + (c1[0] - c0[0]) * t,
+        c0[1] + (c1[1] - c0[1]) * t,
+        c0[2] + (c1[2] - c0[2]) * t
+      ];
+    }
+  }
+  return PORTRAIT_RAMP[PORTRAIT_RAMP.length - 1][1];
 }
 
 function makePortrait(a) {
@@ -147,22 +161,34 @@ function makePortrait(a) {
   canvas.height = PORTRAIT_ROWS * PORTRAIT_CELL;
   wrap.appendChild(canvas);
 
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.decoding = 'async';
-  img.addEventListener('error', () => wrap.replaceWith(makeMosaic(a.name, a.initials)));
-  img.addEventListener('load', () => {
-    try {
-      renderGlyphPortrait(canvas, img);
-    } catch (_) {
+  // try the given path, then common extensions, before the mosaic fallback
+  const base = a.photo.replace(/\.(jpg|jpeg|png|webp)$/i, '');
+  const candidates = [a.photo, `${base}.jpg`, `${base}.jpeg`, `${base}.png`, `${base}.webp`];
+  const tried = [...new Set(candidates)];
+
+  const attempt = (i) => {
+    if (i >= tried.length) {
       wrap.replaceWith(makeMosaic(a.name, a.initials));
+      return;
     }
-  });
-  img.src = a.photo;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.decoding = 'async';
+    img.onload = () => {
+      try {
+        renderParticlePortrait(canvas, img);
+      } catch (_) {
+        wrap.replaceWith(makeMosaic(a.name, a.initials));
+      }
+    };
+    img.onerror = () => attempt(i + 1);
+    img.src = tried[i];
+  };
+  attempt(0);
   return wrap;
 }
 
-function renderGlyphPortrait(canvas, img) {
+function renderParticlePortrait(canvas, img) {
   const cols = PORTRAIT_COLS;
   const rows = PORTRAIT_ROWS;
   const cell = PORTRAIT_CELL;
@@ -188,38 +214,61 @@ function renderGlyphPortrait(canvas, img) {
   sg.drawImage(img, sx, sy, sw, sh, 0, 0, cols, rows);
   const data = sg.getImageData(0, 0, cols, rows).data;
 
-  // build the visible cell list (skip near-black so the face floats)
+  // visible cells only (skip near-black so the face floats clean)
   const cells = [];
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
       const i = (y * cols + x) * 4;
       const l = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
-      const color = portraitColor(l);
-      if (!color) continue;
-      const ch = (x * 7 + y * 13 + Math.round(l * 9)) % 3 === 0 ? '0' : '9';
-      cells.push({ x, y, color, ch, ord: Math.random() });
+      if (l < 0.08) continue;
+      cells.push({ x, y, l, rgb: rampColor(l), ord: Math.random(), ph: Math.random() * 6.28 });
     }
   }
 
   const ctx = canvas.getContext('2d');
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = `${cell}px "Share Tech Mono", ui-monospace, monospace`;
-
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const dur = 700;
   const start = performance.now();
 
+  // cursor in cell-space (the portrait reacts like the home grid)
+  let px = -999;
+  let py = -999;
+  const move = (e) => {
+    const r = canvas.getBoundingClientRect();
+    px = ((e.clientX - r.left) / r.width) * cols;
+    py = ((e.clientY - r.top) / r.height) * rows;
+  };
+  canvas.addEventListener('pointermove', move);
+  canvas.addEventListener('pointerleave', () => { px = -999; py = -999; });
+
+  const FOCUS = 13;
   const frame = (now) => {
-    const p = reduced ? 1 : Math.min(1, (now - start) / dur);
+    if (!canvas.isConnected) return; // artist switched — stop the loop
+    const t = now / 1000;
+    const reveal = reduced ? 1 : Math.min(1, (now - start) / 750);
+
     ctx.fillStyle = '#141210';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     for (const c of cells) {
-      if (c.ord > p) continue; // staggered resolve
-      ctx.fillStyle = c.color;
-      ctx.fillText(c.ch, (c.x + 0.5) * cell, (c.y + 0.5) * cell);
+      if (c.ord > reveal) continue;
+      // idle shimmer + cursor resolve (brighten + grow near the pointer)
+      let b = reduced ? 1 : 1 + 0.07 * Math.sin(t * 1.6 + c.ph);
+      let f = 0;
+      if (px > -900) {
+        const d = Math.hypot(c.x - px, c.y - py);
+        f = Math.max(0, 1 - d / FOCUS);
+        f = f * f;
+        b += f * 0.55;
+      }
+      const r = Math.min(255, c.rgb[0] * b);
+      const g = Math.min(255, c.rgb[1] * b);
+      const bl = Math.min(255, c.rgb[2] * b);
+      ctx.fillStyle = `rgb(${r | 0},${g | 0},${bl | 0})`;
+      const s = cell * (0.74 + 0.14 * c.l + 0.2 * f);
+      const o = (cell - s) / 2;
+      ctx.fillRect(c.x * cell + o, c.y * cell + o, s, s);
     }
-    if (p < 1) requestAnimationFrame(frame);
+    requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 }
@@ -329,12 +378,15 @@ function buildPanel(state, data) {
   if (data.lede) sec.appendChild(el('p', 'lede', data.lede));
 
   if (data.meta) {
-    const dl = el('dl', 'meta');
+    const list = el('div', 'meta');
     for (const [k, v] of data.meta) {
-      dl.appendChild(el('dt', null, k));
-      dl.appendChild(el('dd', null, v));
+      const row = el('div', 'meta-row');
+      row.setAttribute('tabindex', '0');
+      row.appendChild(el('span', 'meta-k', k));
+      row.appendChild(el('span', 'meta-v', v));
+      list.appendChild(row);
     }
-    sec.appendChild(dl);
+    sec.appendChild(list);
   }
 
   if (data.lineup) sec.appendChild(buildLineup(data));

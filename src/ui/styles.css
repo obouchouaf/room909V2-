@@ -221,28 +221,57 @@ nav.bar {
 }
 .section .lede {
   color: var(--cream);
-  max-width: 48ch;
-  margin-bottom: 28px;
+  max-width: 50ch;
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: 30px;
 }
 
-/* meta rows (date / location) */
+/* meta — bold, large, interactive info rows (date / venue / sound …) */
 .meta {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 6px 18px;
-  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 30px;
+  max-width: 620px;
 }
-.meta dt {
+.meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding: 13px 14px 13px 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 2px solid transparent;
+  padding-left: 0;
+  cursor: default;
+  transition: border-color 0.25s var(--ease), padding-left 0.25s var(--ease),
+    background 0.25s var(--ease);
+}
+.meta-row:hover,
+.meta-row:focus-visible {
+  border-left-color: var(--ember);
+  padding-left: 14px;
+  background: linear-gradient(90deg, rgba(255, 92, 0, 0.08), transparent 70%);
+  outline: none;
+}
+.meta-k {
+  flex: 0 0 110px;
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   color: var(--ember);
   text-transform: uppercase;
+  padding-top: 4px;
 }
-.meta dd {
-  font-size: 13px;
-  letter-spacing: 0.08em;
+.meta-v {
+  font-size: clamp(17px, 2.4vw, 23px);
+  letter-spacing: 0.04em;
+  line-height: 1.25;
   color: var(--cream);
   text-transform: uppercase;
+  transition: color 0.2s var(--ease);
+}
+.meta-row:hover .meta-v,
+.meta-row:focus-visible .meta-v {
+  color: var(--ember);
 }
 
 /* single CTA */
@@ -676,6 +705,14 @@ nav.bar {
   .prompt .hint {
     font-size: 9px;
   }
+  .meta-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .meta-k {
+    flex-basis: auto;
+    padding-top: 0;
+  }
   .lineup {
     grid-template-columns: 1fr;
     gap: 22px;
@@ -695,6 +732,8 @@ nav.bar {
   .cta,
   .tickets,
   .lineup-name,
+  .meta-row,
+  .meta-v,
   .popup,
   .popup-panel,
   .bar-item {
