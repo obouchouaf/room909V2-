@@ -131,6 +131,7 @@ nav.bar {
   font-size: 28px;
   letter-spacing: 0.3em;
   line-height: 1.1;
+  white-space: nowrap;
   text-shadow: 0 0 24px rgba(255, 92, 0, 0.4);
 }
 .mark b .nine {
@@ -294,6 +295,15 @@ nav.bar {
 .ui[data-mode='section'] .tickets {
   opacity: 0;
   pointer-events: none;
+}
+
+/* in a section, fade the hero identity (wordmark + sequencer) so the
+   fixed chrome never overlaps the scrolling section content */
+.ui[data-mode='section'] .mark,
+.ui[data-mode='section'] .seq {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s var(--ease);
 }
 
 /* ---- lineup: names + a full-bleed reveal stage (no box) ---- */
@@ -564,15 +574,20 @@ nav.bar {
     padding: 7px 10px;
     white-space: nowrap;
   }
+  /* wordmark: smaller so "ROOM 909" fits with the ember 909 visible */
   .mark {
     left: 18px;
-    bottom: 72px;
+    bottom: 116px;
+  }
+  .mark b {
+    font-size: 18px;
+    letter-spacing: 0.2em;
   }
   .seq {
     grid-template-columns: repeat(8, 1fr);
     right: 18px;
     left: auto;
-    bottom: 72px;
+    bottom: 122px;
   }
   .seq i:nth-child(n + 9) {
     display: none;
@@ -589,7 +604,7 @@ nav.bar {
     display: none;
   }
   .tickets {
-    bottom: 116px;
+    bottom: 66px;
     padding: 11px 22px;
   }
   .lineup {

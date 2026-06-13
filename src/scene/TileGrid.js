@@ -95,41 +95,42 @@ const VERT = /* glsl */ `
     vReveal = clamp(max(focus * 1.4, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // faster movement amplifies everything — flicks feel kinetic
-    float amp = 1.0 + uVelocity * 1.9;
+    float amp = 1.0 + uVelocity * 1.4;
 
-    // tilt the tile toward the cursor (rotates toward the camera)
+    // tilt the tile toward the cursor (rotates toward the camera) — gentle,
+    // so the mosaic reads as an image, not a field of boxes
     vec2 dir = uPointer.xy - center.xy;
     float dl = length(dir);
     dir = dl > 1e-4 ? dir / dl : vec2(0.0);
-    float tilt = focus * 1.15 * amp;
+    float tilt = focus * 0.8 * amp;
 
     vec3 local = position;
     local = rotX(-dir.y * tilt) * rotY(dir.x * tilt) * local;
-    // extra spin on fast moves for a psychedelic tumble
-    local = rotZ(focus * uVelocity * 1.2 * (aSeed.z - 0.5) * 4.0) * local;
+    // a little extra spin on fast moves
+    local = rotZ(focus * uVelocity * 0.6 * (aSeed.z - 0.5) * 4.0) * local;
 
     // --- depth --------------------------------------------------------
     float t = uReduced > 0.5 ? 0.0 : uTime;
     float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.05);  // slow idle float
     // idle float; collapses toward the plane under focus (image resolves)
     float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.95);
-    // focused tiles lift toward the camera, harder when moving fast
-    float zFocus = focus * 1.7 * amp;
+    // focused tiles lift toward the camera — restrained
+    float zFocus = focus * 1.1 * amp;
 
     // expanding ripple rings emanate from the cursor — like a stone dropped
     // in z-space. Rings travel outward over time, so distant tiles get the
-    // displacement later. A wider falloff than the resolve so it carries.
+    // displacement later. Softened so it shimmers rather than churns.
     float rfall = 1.0 - smoothstep(0.0, uFocusRadius * 2.4, dist);
     float ringR = fract(t * 0.5) * uFocusRadius * 2.4;     // wavefront radius
     float ring = exp(-pow((dist - ringR) * 1.7, 2.0));      // gaussian ring
-    float wave = sin(dist * 3.0 - t * 6.0) * 0.35;
-    float ripple = (ring * 0.9 + wave) * rfall * (0.35 + uVelocity) * uActive;
+    float wave = sin(dist * 3.0 - t * 6.0) * 0.2;
+    float ripple = (ring * 0.5 + wave) * rfall * (0.25 + uVelocity * 0.8) * uActive;
 
-    // fisheye lens: cluster tiles tight near the cursor centre, stretch the
-    // surrounding ring outward — a warp in the resolve zone
+    // fisheye lens: cluster tiles near the cursor centre, stretch the
+    // surrounding ring outward — a warp in the resolve zone (eased down)
     float rN = dist / max(uFocusRadius, 1e-3);
-    float lensPull = focus * (1.0 - clamp(rN, 0.0, 1.0));   // strong at centre
-    float lensPush = smoothstep(0.45, 1.1, rN) * focus * 0.5; // ring stretches
+    float lensPull = focus * (1.0 - clamp(rN, 0.0, 1.0));
+    float lensPush = smoothstep(0.45, 1.1, rN) * focus * 0.3;
 
     // sequencer column pulse — the column flash rides the music's kick
     // (uKick is 1 on each detected onset; falls back to the step env)
@@ -156,25 +157,25 @@ const VERT = /* glsl */ `
     float sa = uSectionSeed * (0.6 + aSeed.y);
     outDir = rotZ(sa) * outDir;
     vec3 explode = outDir * tr * uExplodeAmp;
-    explode.z -= tr * 2.5;                       // push the cloud back a touch
-    local = rotZ(tr * (aSeed.z - 0.5) * 4.0 + tr * sa) * local; // particle spin
+    explode.z -= tr * 1.5;                       // push the cloud back a touch
+    local = rotZ(tr * (aSeed.z - 0.5) * 2.5 + tr * sa) * local; // gentle spin
 
     // --- assemble -----------------------------------------------------
     vec4 world = modelMatrix * instanceMatrix * vec4(local, 1.0);
     world.xyz += explode;
     // fisheye lens: pull in near the cursor centre, push the ring outward
-    world.xy += dir * (focus * 0.3 + lensPull * 0.8) * amp;
+    world.xy += dir * (focus * 0.2 + lensPull * 0.5) * amp;
     world.xy -= dir * lensPush * amp;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
 
     // --- idle 909 attract --------------------------------------------
     // inside-glyph tiles surge forward into a bright plane; the rest fall
-    // back and scatter aside, so the 909 (or rotating word) assembles.
+    // back and slide aside, so the 909 (or rotating word) assembles.
     float inGlyph = texture2D(uMark, aCellUV).r;
     float A = uAttract;
-    world.z += A * (inGlyph * 2.6 - (1.0 - inGlyph) * 7.0);
+    world.z += A * (inGlyph * 1.6 - (1.0 - inGlyph) * 4.0);
     vec2 outward = normalize(center.xy + vec2(1e-4, 1e-4));
-    world.xy += A * (1.0 - inGlyph) * outward * 2.5;
+    world.xy += A * (1.0 - inGlyph) * outward * 1.6;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -208,8 +209,9 @@ const FRAG = /* glsl */ `
     // region — the mosaic is scattered. Focus pulls the sample home, so
     // the image resolves sharply under the cursor (the core trick).
     vec2 jitter = (vec2(hash(vCellUV * 53.0), hash(vCellUV * 91.0)) - 0.5);
-    // scatter grows with how fast the cursor is moving, too
-    float scatter = (1.0 - vFocus) * (0.22 + uTransition * 0.10) + vFocus * uVelocity * 0.06;
+    // a coherent image at rest (reads like the footage), scattering a little
+    // when out of focus and a touch more during section transitions
+    float scatter = (1.0 - vFocus) * (0.09 + uTransition * 0.12) + vFocus * uVelocity * 0.05;
     vec2 sampUV = vCellUV + jitter * scatter;
 
     // trippy chromatic split — a slow wobble, stronger near the cursor and
@@ -237,10 +239,11 @@ const FRAG = /* glsl */ `
     // music-reactive tiles glow softly on the kick
     col += uEmber * vReact * 0.28;
 
-    // faint tile border, stronger where unfocused (grid reads as grid)
-    vec2 e = smoothstep(0.0, 0.045, vLocalUV) * smoothstep(0.0, 0.045, 1.0 - vLocalUV);
+    // very faint tile seams — present but not a hard grid, so the mosaic
+    // reads as one image rather than a wall of boxes
+    vec2 e = smoothstep(0.0, 0.04, vLocalUV) * smoothstep(0.0, 0.04, 1.0 - vLocalUV);
     float frame = min(e.x, e.y);
-    col *= mix(1.0, mix(0.78, 0.94, vFocus), 1.0 - frame);
+    col *= mix(1.0, mix(0.9, 0.97, vFocus), 1.0 - frame);
 
     // dim the scattered cloud so section text stays readable over it
     col *= 1.0 - uTransition * 0.5;
@@ -277,9 +280,9 @@ export class TileGrid {
       uTransition: { value: 0 },
       uStep: { value: 0 },
       uStepEnv: { value: 0 },
-      uDepthAmp: { value: 1.7 },
-      uPushAmp: { value: 0.9 },
-      uExplodeAmp: { value: 3.6 },
+      uDepthAmp: { value: 1.0 },
+      uPushAmp: { value: 0.7 },
+      uExplodeAmp: { value: 2.4 },
       uSectionSeed: { value: 0 },
       uKick: { value: 0 },
       uAudio: { value: 0 },

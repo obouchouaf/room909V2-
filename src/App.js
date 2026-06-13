@@ -80,7 +80,7 @@ export class App {
     this.swipe.enable();
 
     // ---- idle 909 attract animation ----
-    this.attract = new AttractMode(this.grid, { idle: 5, reduced: this.reduced });
+    this.attract = new AttractMode(this.grid, { idle: 8, reduced: this.reduced });
     // any wheel / key / pointer gesture counts as interaction (resets idle)
     this._lastInteract = 0;
     const bump = () => { this._lastInteract = performance.now(); };
@@ -144,7 +144,7 @@ export class App {
     // row count, so phones don't get huge chunky tiles. Portrait screens
     // (small min-edge) still get a denser grid than before.
     const isMobile = w < 720;
-    const targetTilePx = isMobile ? 38 : 50; // smaller, denser tiles
+    const targetTilePx = isMobile ? 32 : 42; // finer, more image-like mosaic
     const rows = Math.max(10, Math.min(this.grid.capRows, Math.round(h / targetTilePx)));
     const cols = Math.max(6, Math.min(this.grid.capCols, Math.round(w / targetTilePx)));
 
