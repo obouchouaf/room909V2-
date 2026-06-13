@@ -79,8 +79,9 @@ export class App {
     this.swipe = new SwipeNav(this.director);
     this.swipe.enable();
 
-    // ---- idle 909 attract animation ----
-    this.attract = new AttractMode(this.grid, { idle: 8, reduced: this.reduced });
+    // ---- idle attract animation (disabled for now — the hidden info is
+    // revealed by scratching with the cursor, not on an idle timer) ----
+    this.attract = new AttractMode(this.grid, { idle: Infinity, reduced: this.reduced });
     // any wheel / key / pointer gesture counts as interaction (resets idle)
     this._lastInteract = 0;
     const bump = () => { this._lastInteract = performance.now(); };

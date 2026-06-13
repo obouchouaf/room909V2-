@@ -96,7 +96,7 @@ export class PointerRig {
     // activity: ~1 while moving, easing to 0 over ~1s after the last move,
     // so the cursor reveal (and the 909) fades out when you stop
     const since = (performance.now() - this._lastMove) / 1000;
-    this.strength = Math.max(0, 1 - since / 1.1);
+    this.strength = Math.max(0, 1 - since / 1.8);
 
     // velocity: smoothed length of the per-frame pointer delta. Fast attack
     // so quick flicks spike it, slow release so it trails off — faster

@@ -36,8 +36,6 @@ const VERT = /* glsl */ `
   uniform float uVelocity;     // smoothed pointer speed 0..1 (amplifies all)
   uniform float uBaseReveal;   // reveal floor for reduced motion
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
-  uniform float uAttract;      // idle 909 attract animation 0..1
-  uniform sampler2D uMark;     // glyph mask (also used in the attract assemble)
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -92,10 +90,12 @@ const VERT = /* glsl */ `
     float focus = spatial * uActive;
     vFocus = focus;
 
-    // the 909 only flashes briefly on a deliberate cursor MOVE, then fades —
-    // it does not linger while the pointer simply rests over the tiles.
-    float vrev = smoothstep(0.14, 0.55, uVelocity);
-    vReveal = clamp(max(vrev, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    // the hidden text is revealed LOCALLY where you scratch: the reveal
+    // follows the cursor within a small radius and fades as you move away
+    // (and as you stop). Different areas hide different info.
+    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.15, dist);
+    revFall = revFall * revFall * (3.0 - 2.0 * revFall);
+    vReveal = clamp(max(revFall * uActive * 1.5, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
@@ -171,15 +171,6 @@ const VERT = /* glsl */ `
     world.xy -= dir * lensPush * amp;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
 
-    // --- idle 909 attract --------------------------------------------
-    // inside-glyph tiles surge forward into a bright plane; the rest fall
-    // back and slide aside, so the 909 (or rotating word) assembles.
-    float inGlyph = texture2D(uMark, aCellUV).r;
-    float A = uAttract;
-    world.z += A * (inGlyph * 1.6 - (1.0 - inGlyph) * 4.0);
-    vec2 outward = normalize(center.xy + vec2(1e-4, 1e-4));
-    world.xy += A * (1.0 - inGlyph) * outward * 1.6;
-
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
   }
@@ -230,11 +221,12 @@ const FRAG = /* glsl */ `
     // (no hover brightening — the resolve sharpens via reduced scatter only,
     // so tiles under the cursor don't glare)
 
-    // a small, centred 909 (sampled zoomed-out so it reads compact, not a
-    // billboard) flashes in cream on movement, then fades away
-    vec2 mruv = (vFullUV - 0.5) * 2.5 + 0.5;
-    float mark = texture2D(uMark, mruv).r;
-    col = mix(col, vec3(0.98, 0.93, 0.82), vReveal * mark);    // small cream 909
+    // scratch reveal: the hidden label under the cursor surfaces. The local
+    // surround dims and the text burns cream, so each region shows its own
+    // info (909 centre, MARRAKECH above, coordinates below, ...).
+    float mark = texture2D(uMark, vFullUV).r;
+    col = mix(col, col * 0.32, vReveal * (1.0 - mark));        // dim local surround
+    col = mix(col, vec3(0.98, 0.93, 0.82), vReveal * mark);    // cream text
     col += uEmber * mark * vReveal * 0.4;                      // ember rim
 
     // sequencer emissive flash — this is what bloom catches
@@ -412,9 +404,11 @@ export class TileGrid {
 }
 
 /**
- * The glyph mask: a canvas drawn with text, sized to nearly fill the frame
- * so it reads across the whole mosaic. Returns the texture plus a setText()
- * the attract animation uses to rotate through "909" and the idle words.
+ * The hidden-content mask: a canvas with different labels placed in
+ * different regions, so scratching different parts of the screen with the
+ * cursor uncovers different info — "909" in the centre, the city above,
+ * the coordinates below, etc. The tile shader samples it where the cursor
+ * is and burns the local text in.
  */
 function makeMark() {
   const c = document.createElement('canvas');
@@ -423,33 +417,30 @@ function makeMark() {
   const g = c.getContext('2d');
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-  let current = '909';
 
-  const draw = (text) => {
-    current = text;
+  const label = (text, fx, fy, px) => {
+    g.font = `${px}px "Share Tech Mono", ui-monospace, monospace`;
+    g.fillText(text, c.width * fx, c.height * fy);
+  };
+
+  const draw = () => {
     g.fillStyle = '#000';
     g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = '#fff';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    let size = 520;
-    g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-    while (g.measureText(text).width > c.width * 0.9 && size > 24) {
-      size -= 8;
-      g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-    }
-    g.fillText(text, c.width / 2, c.height / 2 + 14);
+    label('909', 0.5, 0.5, 250); //         centre — the signature
+    label('MARRAKECH', 0.5, 0.14, 62); //   top
+    label('31.62°N  7.99°W', 0.5, 0.87, 46); // bottom
+    label('128 BPM', 0.16, 0.5, 48); //     left
+    label('NEXT · SEP 12', 0.84, 0.5, 44); // right
     tex.needsUpdate = true;
   };
 
-  draw('909');
+  draw();
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => draw(current)).catch(() => {});
+    document.fonts.ready.then(draw).catch(() => {});
   }
-  return {
-    texture: tex,
-    setText: (text) => {
-      if (text !== current) draw(text);
-    }
-  };
+  // setText kept as a no-op so the (now disabled) attract path is harmless
+  return { texture: tex, setText: () => {} };
 }
