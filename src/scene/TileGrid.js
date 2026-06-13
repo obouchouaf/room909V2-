@@ -36,6 +36,7 @@ const VERT = /* glsl */ `
   uniform float uVelocity;     // smoothed pointer speed 0..1 (amplifies all)
   uniform float uBaseReveal;   // reveal floor for reduced motion
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
+  uniform sampler2D uMark;     // hidden-text mask (to flatten text tiles)
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -91,52 +92,57 @@ const VERT = /* glsl */ `
     vFocus = focus;
 
     // the hidden text is revealed LOCALLY where you scratch. The reveal is
-    // wider than it is tall (words are horizontal bands), so approaching a
-    // label uncovers the whole word; it fades as you move away or stop.
+    // WIDE but SHORT (words are horizontal bands), so approaching a label
+    // uncovers that whole word, one band at a time; fades as you move away.
     vec2 dv = center.xy - uPointer.xy;
-    dv.x *= 0.5;                                    // widen horizontally
+    dv.x *= 0.5;                                    // wide horizontally
+    dv.y *= 1.6;                                    // short vertically (one band)
     float rdist = length(dv);
-    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.5, rdist);
+    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.3, rdist);
     revFall = revFall * revFall * (3.0 - 2.0 * revFall);
-    vReveal = clamp(max(revFall * uActive * 1.6, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    vReveal = clamp(max(revFall * uActive * 1.7, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+
+    // is this tile part of the hidden text? if so, and it's being revealed,
+    // flatten it so the word stays crisp instead of fragmenting in 3D.
+    float onText = texture2D(uMark, aCellUV).r * vReveal;
+    float calm = 1.0 - onText;
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
 
-    // tilt the tile toward the cursor (rotates toward the camera) — gentle,
-    // so the mosaic reads as an image, not a field of boxes
+    // tilt the tile toward the cursor (rotates toward the camera). Text
+    // tiles stay flat (calm) so the revealed word doesn't fragment.
     vec2 dir = uPointer.xy - center.xy;
     float dl = length(dir);
     dir = dl > 1e-4 ? dir / dl : vec2(0.0);
-    float tilt = focus * 0.8 * amp;
+    float tilt = focus * 1.0 * amp * calm;
 
     vec3 local = position;
     local = rotX(-dir.y * tilt) * rotY(dir.x * tilt) * local;
     // a little extra spin on fast moves
-    local = rotZ(focus * uVelocity * 0.6 * (aSeed.z - 0.5) * 4.0) * local;
+    local = rotZ(focus * uVelocity * 0.7 * (aSeed.z - 0.5) * 4.0 * calm) * local;
 
     // --- depth --------------------------------------------------------
     float t = uReduced > 0.5 ? 0.0 : uTime;
-    float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.05);  // slow idle float
-    // idle float; collapses toward the plane under focus (image resolves)
-    float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.95);
-    // focused tiles lift toward the camera — restrained
-    float zFocus = focus * 1.1 * amp;
+    // always-alive idle float so the grid breathes like particles
+    float n = noise(center.xy * 0.18 + aSeed.xy * 7.0 + t * 0.06);
+    float zNoise = (n - 0.5) * uDepthAmp * (1.0 - focus * 0.9) * calm;
+    // focused tiles lift toward the camera — lively, but flat on text
+    float zFocus = focus * 1.6 * amp * calm;
 
     // expanding ripple rings emanate from the cursor — like a stone dropped
-    // in z-space. Rings travel outward over time, so distant tiles get the
-    // displacement later. Softened so it shimmers rather than churns.
+    // in z-space, travelling outward over time.
     float rfall = 1.0 - smoothstep(0.0, uFocusRadius * 2.4, dist);
     float ringR = fract(t * 0.5) * uFocusRadius * 2.4;     // wavefront radius
     float ring = exp(-pow((dist - ringR) * 1.7, 2.0));      // gaussian ring
-    float wave = sin(dist * 3.0 - t * 6.0) * 0.2;
-    float ripple = (ring * 0.5 + wave) * rfall * (0.25 + uVelocity * 0.8) * uActive;
+    float wave = sin(dist * 3.0 - t * 6.0) * 0.22;
+    float ripple = (ring * 0.6 + wave) * rfall * (0.3 + uVelocity * 0.9) * uActive * calm;
 
     // fisheye lens: cluster tiles near the cursor centre, stretch the
-    // surrounding ring outward — a warp in the resolve zone (eased down)
+    // surrounding ring outward — a warp in the resolve zone
     float rN = dist / max(uFocusRadius, 1e-3);
-    float lensPull = focus * (1.0 - clamp(rN, 0.0, 1.0));
-    float lensPush = smoothstep(0.45, 1.1, rN) * focus * 0.3;
+    float lensPull = focus * (1.0 - clamp(rN, 0.0, 1.0)) * calm;
+    float lensPush = smoothstep(0.45, 1.1, rN) * focus * 0.35 * calm;
 
     // sequencer column pulse — the column flash rides the music's kick
     // (uKick is 1 on each detected onset; falls back to the step env)
@@ -278,8 +284,8 @@ export class TileGrid {
       uTransition: { value: 0 },
       uStep: { value: 0 },
       uStepEnv: { value: 0 },
-      uDepthAmp: { value: 1.0 },
-      uPushAmp: { value: 0.7 },
+      uDepthAmp: { value: 1.5 },
+      uPushAmp: { value: 0.8 },
       uExplodeAmp: { value: 2.4 },
       uSectionSeed: { value: 0 },
       uKick: { value: 0 },
@@ -424,13 +430,14 @@ function makeMark() {
   const g = c.getContext('2d');
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.flipY = false; // so the bands read top→bottom in the right order
 
   // [text, vertical position, max width fraction, target height fraction]
   const LABELS = [
-    ['MARRAKECH', 0.15, 0.74, 0.1],
-    ['909', 0.42, 0.46, 0.3],
-    ['LE CHARLESTON', 0.67, 0.9, 0.11],
-    ['31.62°N 7.99°W', 0.87, 0.84, 0.08]
+    ['MARRAKECH', 0.15, 0.74, 0.095],
+    ['909', 0.43, 0.46, 0.24],
+    ['LE CHARLESTON', 0.66, 0.9, 0.1],
+    ['12 SEP 2026', 0.86, 0.72, 0.085]
   ];
 
   const draw = () => {

@@ -265,6 +265,36 @@ nav.bar {
   color: var(--charcoal);
 }
 
+/* ---- hero prompt — "what brings you here?" ---- */
+.prompt {
+  position: fixed;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  text-transform: uppercase;
+  transition: opacity 0.5s var(--ease);
+}
+.prompt .q {
+  font-size: 15px;
+  letter-spacing: 0.26em;
+  color: var(--cream);
+  text-shadow: 0 0 22px rgba(20, 18, 16, 0.9);
+}
+.prompt .hint {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--dim);
+}
+.ui[data-mode='section'] .prompt {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ---- GET TICKETS — front and center, above the nav bar ---- */
 .tickets {
   position: fixed;
@@ -606,6 +636,17 @@ nav.bar {
   .tickets {
     bottom: 66px;
     padding: 11px 22px;
+  }
+  .prompt {
+    top: 20px;
+    width: 90vw;
+  }
+  .prompt .q {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+  }
+  .prompt .hint {
+    font-size: 9px;
   }
   .lineup {
     grid-template-columns: 1fr;

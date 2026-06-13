@@ -71,6 +71,13 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
     cells.push(c);
   }
 
+  // ---- hero prompt — the invitation to explore ----
+  const prompt = document.createElement('div');
+  prompt.className = 'prompt';
+  prompt.innerHTML =
+    '<span class="q">What brings you here?</span>' +
+    '<span class="hint">— scratch the grid · pick a room below —</span>';
+
   // ---- get tickets — visible on the front page ----
   const tickets = document.createElement('a');
   tickets.className = 'tickets';
@@ -82,7 +89,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, mark, seq, tickets, popup.el);
+  root.append(nav, mark, seq, prompt, tickets, popup.el);
 
   // No intro gate: the music starts on the visitor's first real gesture
   // (click or key — the interactions browsers accept for audio unlock).
