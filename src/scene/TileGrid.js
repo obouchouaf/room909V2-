@@ -36,6 +36,7 @@ const VERT = /* glsl */ `
   uniform float uVelocity;     // smoothed pointer speed 0..1 (amplifies all)
   uniform float uBaseReveal;   // reveal floor for reduced motion
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
+  uniform vec2  uRevealHalf;   // half-size (world) of the centred reveal box
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -90,20 +91,17 @@ const VERT = /* glsl */ `
     float focus = spatial * uActive;
     vFocus = focus;
 
-    // the hidden text is revealed LOCALLY where you scratch. The reveal is
-    // WIDE but SHORT (words are horizontal bands), so approaching a label
-    // uncovers that whole word, one band at a time; fades as you move away.
-    vec2 dv = center.xy - uPointer.xy;
-    dv.x *= 0.5;                                    // wide horizontally
-    dv.y *= 1.9;                                    // short vertically (one band)
-    float rdist = length(dv);
-    float revFall = 1.0 - smoothstep(0.0, uFocusRadius * 1.2, rdist);
-    revFall = revFall * revFall * (3.0 - 2.0 * revFall);
-    vReveal = clamp(max(revFall * uActive * 1.7, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    // ONE centred info is revealed at a time, confined to a box that matches
+    // the text bounds — so the rest of the grid stays interactive tiles. The
+    // word itself is cycled by the App on each new scratch. Scratching (pointer
+    // activity) brings the box in; it fades when you stop.
+    vec2 rn = abs(center.xy) / max(uRevealHalf, vec2(1e-3));
+    float box = 1.0 - smoothstep(0.82, 1.12, max(rn.x, rn.y));
+    box = box * box * (3.0 - 2.0 * box);
+    vReveal = clamp(max(box * uActive, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
-    // flatten the WHOLE scratch zone (not just the glyph-centre tiles) so the
-    // revealed word sits on a clean flat patch and never fragments in 3D. The
-    // rest of the grid stays fully interactive.
+    // flatten only that centred box onto a clean plane so the word reads crisp;
+    // everywhere else keeps the full 3D interactivity.
     float calm = 1.0 - vReveal;
 
     // faster movement amplifies everything — flicks feel kinetic
@@ -300,6 +298,7 @@ export class TileGrid {
       uVelocity: { value: 0 },
       uBaseReveal: { value: reduced ? 0.28 : 0 },
       uCellSize: { value: new THREE.Vector2(0.05, 0.05) },
+      uRevealHalf: { value: new THREE.Vector2(5, 2) },
       uAttract: { value: 0 },
       uAttractPulse: { value: 0 },
       uReduced: { value: reduced ? 1 : 0 },
@@ -389,7 +388,9 @@ export class TileGrid {
     this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
     // tile size in texture UV, so the mask samples crisply across tiles
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
-    // redraw the hidden-text mask at the screen aspect (no stretch)
+    // the centred reveal box — matches the word size drawn in the mask
+    this.uniforms.uRevealHalf.value.set(worldW * 0.34, worldH * 0.15);
+    // redraw the centred word at the screen aspect (no stretch)
     this._mark.resize(worldW / worldH);
   }
 
@@ -421,13 +422,13 @@ export class TileGrid {
 }
 
 /**
- * The hidden-content mask: a canvas holding labels stacked in bands, so
- * scratching up/down the screen with the cursor uncovers different info —
- * the city, the signature 909, the venue, the coordinates.
+ * The hidden-content mask: a canvas holding ONE centred word at a time
+ * (909 / the date / the venue / the city). The App cycles the word on each
+ * new scratch via setText(); the shader reveals it inside a centred box so
+ * only that area resolves and the rest of the grid stays interactive.
  *
  * The canvas is redrawn at the screen's aspect ratio (see resize) so the
- * text is NOT horizontally stretched when sampled across the wide grid,
- * and each label auto-sizes to fit, so it reads clearly through the tiles.
+ * word is NOT horizontally stretched when sampled across the wide grid.
  */
 function makeMark() {
   const c = document.createElement('canvas');
@@ -436,40 +437,35 @@ function makeMark() {
   const g = c.getContext('2d');
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.flipY = false; // so the bands read top→bottom in the right order
-
-  // [text, vertical position, max width fraction, target height fraction]
-  const LABELS = [
-    ['MARRAKECH', 0.15, 0.74, 0.1],
-    ['909', 0.43, 0.5, 0.28],
-    ['LE CHARLESTON', 0.67, 0.92, 0.105],
-    ['12 SEP 2026', 0.87, 0.74, 0.09]
-  ];
+  tex.flipY = false;
+  let current = '909';
 
   const draw = () => {
     g.fillStyle = '#000';
     g.fillRect(0, 0, c.width, c.height);
     g.fillStyle = '#fff';
+    g.strokeStyle = '#fff';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.strokeStyle = '#fff';
     g.lineJoin = 'round';
-    for (const [text, fy, wf, hf] of LABELS) {
-      let size = Math.max(8, hf * c.height);
+    // fit the single word to the centred reveal box: ~62% width, ~26% height
+    let size = Math.min(0.26 * c.height, 0.5 * c.width);
+    g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
+    while (g.measureText(current).width > c.width * 0.62 && size > 8) {
+      size -= 4;
       g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-      while (g.measureText(text).width > c.width * wf && size > 8) {
-        size -= 4;
-        g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-      }
-      // stroke + fill so the glyphs are bold enough to read through tiles
-      g.lineWidth = Math.max(2, size * 0.1);
-      g.strokeText(text, c.width / 2, c.height * fy);
-      g.fillText(text, c.width / 2, c.height * fy);
     }
+    g.lineWidth = Math.max(2, size * 0.09);
+    g.strokeText(current, c.width / 2, c.height / 2);
+    g.fillText(current, c.width / 2, c.height / 2);
     tex.needsUpdate = true;
   };
 
-  // redraw at the current screen aspect so text isn't stretched
+  const setText = (text) => {
+    if (text === current) return;
+    current = text;
+    draw();
+  };
   const resize = (aspect) => {
     const h = Math.round(Math.min(4096, Math.max(384, c.width / aspect)));
     if (h !== c.height) c.height = h;
@@ -480,6 +476,5 @@ function makeMark() {
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(draw).catch(() => {});
   }
-  // setText kept as a no-op so the (disabled) attract path stays harmless
-  return { texture: tex, resize, setText: () => {} };
+  return { texture: tex, resize, setText };
 }

@@ -105,6 +105,11 @@ export class App {
     this.setMeter = setMeter;
     this.cursorPulse = null; // wired from main.js
 
+    // the centred info reveal cycles through these on each new scratch
+    this._infos = ['909', '12 SEP 2026', 'LE CHARLESTON', 'MARRAKECH'];
+    this._infoIndex = -1; // first scratch lands on 909
+    this._wasScratching = false;
+
     // sequencer DOM follows the same clock
     this._litCell = 0;
     this.clock.onStep((step) => {
@@ -195,6 +200,17 @@ export class App {
 
     // input
     this.pointer.tick(this.reduced ? 1 : Math.min(1, dt * 6));
+
+    // cycle the centred info on each fresh scratch: 909 → date → venue → city
+    if (!still) {
+      if (this.pointer.strength > 0.55 && !this._wasScratching) {
+        this._wasScratching = true;
+        this._infoIndex = (this._infoIndex + 1) % this._infos.length;
+        this.grid.setMarkText(this._infos[this._infoIndex]);
+      } else if (this.pointer.strength < 0.12) {
+        this._wasScratching = false;
+      }
+    }
 
     // idle 909 attract — eligible only on HERO with no recent interaction
     const interacting =
