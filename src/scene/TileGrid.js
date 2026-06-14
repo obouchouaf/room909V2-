@@ -36,7 +36,6 @@ const VERT = /* glsl */ `
   uniform float uVelocity;     // smoothed pointer speed 0..1 (amplifies all)
   uniform float uBaseReveal;   // reveal floor for reduced motion
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
-  uniform sampler2D uMark;     // hidden-text mask (to flatten text tiles)
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -102,10 +101,10 @@ const VERT = /* glsl */ `
     revFall = revFall * revFall * (3.0 - 2.0 * revFall);
     vReveal = clamp(max(revFall * uActive * 1.7, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
-    // is this tile part of the hidden text? if so, and it's being revealed,
-    // flatten it so the word stays crisp instead of fragmenting in 3D.
-    float onText = texture2D(uMark, aCellUV).r * vReveal;
-    float calm = 1.0 - onText;
+    // flatten the WHOLE scratch zone (not just the glyph-centre tiles) so the
+    // revealed word sits on a clean flat patch and never fragments in 3D. The
+    // rest of the grid stays fully interactive.
+    float calm = 1.0 - vReveal;
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
@@ -179,9 +178,9 @@ const VERT = /* glsl */ `
     world.xy += dir * (focus * 0.2 + lensPull * 0.5) * amp;
     world.xy -= dir * lensPush * amp;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
-    // whole grid breathes forward on every detected kick — the scene pulses
-    // in time with the music's low end
-    world.z += uKick * (0.18 + aSeed.x * 0.25);
+    // whole grid breathes forward on every detected kick — but not the flat
+    // scratch zone, so the revealed text stays crisp
+    world.z += uKick * (0.18 + aSeed.x * 0.25) * calm;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -221,10 +220,10 @@ const FRAG = /* glsl */ `
     float scatter = (1.0 - vFocus) * (0.09 + uTransition * 0.12) + vFocus * uVelocity * 0.05;
     vec2 sampUV = vCellUV + jitter * scatter;
 
-    // trippy chromatic split — a slow wobble, stronger near the cursor and
-    // pushed hard by cursor velocity (fast flicks smear the channels).
+    // trippy chromatic split — a slow wobble, stronger near the cursor. It is
+    // killed inside the reveal so the hidden text reads crisp, not fringed.
     float ca = (0.003 + vFocus * 0.006) * (1.0 + uVelocity * 1.2)
-             * (0.6 + 0.4 * sin(uTime * 0.7 + vCellUV.x * 6.0));
+             * (0.6 + 0.4 * sin(uTime * 0.7 + vCellUV.x * 6.0)) * (1.0 - vReveal);
     vec2 cao = vec2(ca, ca * 0.4);
     vec3 col;
     col.r = texture2D(uMap, sampUV + cao).r;
@@ -250,11 +249,11 @@ const FRAG = /* glsl */ `
     // and the whole grid lifts a touch on the kick (synced to the music)
     col *= 1.0 + uKick * 0.06;
 
-    // very faint tile seams — present but not a hard grid, so the mosaic
-    // reads as one image rather than a wall of boxes
+    // very faint tile seams — present but not a hard grid. Suppressed inside
+    // the reveal so the text isn't broken up by dark gaps.
     vec2 e = smoothstep(0.0, 0.04, vLocalUV) * smoothstep(0.0, 0.04, 1.0 - vLocalUV);
     float frame = min(e.x, e.y);
-    col *= mix(1.0, mix(0.9, 0.97, vFocus), 1.0 - frame);
+    col *= mix(1.0, mix(0.9, 0.97, vFocus), (1.0 - frame) * (1.0 - vReveal));
 
     // dim the scattered cloud so section text stays readable over it
     col *= 1.0 - uTransition * 0.5;

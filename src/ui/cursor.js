@@ -14,33 +14,38 @@ export function initCursor() {
   const el = document.createElement('div');
   el.className = 'cursor';
   el.setAttribute('aria-hidden', 'true');
+  // a TR-909 knob: charcoal body, ember collar, a pointer indicator
   el.innerHTML =
     '<span class="cursor-scale">' +
-    '<span class="cursor-ring"></span>' +
-    '<span class="cursor-tick t"></span><span class="cursor-tick r"></span>' +
-    '<span class="cursor-tick b"></span><span class="cursor-tick l"></span>' +
-    '<span class="cursor-dot"></span>' +
+    '<span class="knob"></span>' +
+    '<span class="knob-pointer"></span>' +
     '</span>';
   document.body.appendChild(el);
+  el.classList.add('show'); // always present (incl. fullscreen)
 
   let tx = window.innerWidth / 2;
   let ty = window.innerHeight / 2;
   let cx = tx;
   let cy = ty;
-  let shown = false;
 
-  window.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch') return;
-    tx = e.clientX;
-    ty = e.clientY;
-    if (!shown) {
-      shown = true;
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      if (e.pointerType === 'touch') return;
+      tx = e.clientX;
+      ty = e.clientY;
       el.classList.add('show');
-    }
-  });
+    },
+    { passive: true }
+  );
   window.addEventListener('pointerdown', () => el.classList.add('down'));
   window.addEventListener('pointerup', () => el.classList.remove('down'));
-  document.addEventListener('mouseleave', () => el.classList.remove('show'));
+  // keep working through fullscreen transitions — re-host in the fullscreen
+  // element so the knob is never orphaned outside the fullscreen layer
+  document.addEventListener('fullscreenchange', () => {
+    const fs = document.fullscreenElement;
+    (fs || document.body).appendChild(el);
+  });
 
   // lock onto interactive targets
   const interactive = 'a, button, .bar-item, .lineup-name, .cta, .tickets, .stage-arrow, .rc-link, .meta-row';

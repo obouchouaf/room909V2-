@@ -52,12 +52,13 @@ canvas#gl {
   position: fixed;
   top: 0;
   left: 0;
-  width: 34px;
-  height: 34px;
-  z-index: 9999;
+  width: 30px;
+  height: 30px;
+  z-index: 99999;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.25s var(--ease);
+  transition: opacity 0.25s var(--ease), width 0.22s var(--ease),
+    height 0.22s var(--ease);
   will-change: transform;
 }
 .cursor.show {
@@ -69,94 +70,60 @@ canvas#gl {
   inset: 0;
   animation: cursorBeat 0.469s ease-out infinite;
 }
-/* the ring carries the slow rotation */
-.cursor-ring {
+/* the knob body — charcoal cylinder with an ember collar */
+.knob {
   position: absolute;
   inset: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle at 38% 32%, #2c2419, #15110d 72%);
   border: 1.5px solid var(--ember);
-  border-radius: 6px;
-  animation: cursorSpin 9s linear infinite;
-  transition: border-radius 0.25s var(--ease), background 0.25s var(--ease);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7),
+    inset 0 0 6px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 92, 0, 0.28);
 }
-@keyframes cursorSpin {
-  to {
-    transform: rotate(360deg);
-  }
+/* the pointer indicator (the knob's setting line) */
+.knob-pointer {
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  width: 2px;
+  height: 9px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--cream);
+  box-shadow: 0 0 5px rgba(255, 92, 0, 0.7);
+  transform-origin: 50% 12px; /* rotate around the knob centre */
+  transition: transform 0.3s var(--ease), background 0.25s var(--ease);
 }
 @keyframes cursorBeat {
   0% {
-    transform: scale(0.84);
-    opacity: 1;
+    transform: scale(0.86);
   }
   60% {
     transform: scale(1);
-    opacity: 0.9;
   }
   100% {
-    transform: scale(1.04);
-    opacity: 0.72;
+    transform: scale(1.05);
   }
 }
-.cursor-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 3px;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--ember);
-  transform: translate(-50%, -50%);
+/* press: turn the knob down a notch */
+.cursor.down .knob-pointer {
+  transform: rotate(-26deg);
 }
-.cursor-tick {
-  position: absolute;
-  background: var(--ember);
+.cursor.down .knob {
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 92, 0, 0.5);
 }
-.cursor-tick.t,
-.cursor-tick.b {
-  left: 50%;
-  width: 1.5px;
-  height: 5px;
-  margin-left: -0.75px;
-}
-.cursor-tick.l,
-.cursor-tick.r {
-  top: 50%;
-  width: 5px;
-  height: 1.5px;
-  margin-top: -0.75px;
-}
-.cursor-tick.t {
-  top: -7px;
-}
-.cursor-tick.b {
-  bottom: -7px;
-}
-.cursor-tick.l {
-  left: -7px;
-}
-.cursor-tick.r {
-  right: -7px;
-}
-/* press: tighten. lock onto a target: grow + fill faintly, ring squares up */
-.cursor.down {
-  transform-origin: center;
-}
-.cursor.down .cursor-ring {
-  background: rgba(255, 92, 0, 0.25);
-}
+/* lock onto a target: knob grows, pointer turns, collar brightens */
 .cursor.lock {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
 }
-.cursor.lock .cursor-ring {
-  border-radius: 2px;
-  background: rgba(255, 92, 0, 0.12);
+.cursor.lock .knob {
+  border-color: var(--cream);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 16px rgba(255, 92, 0, 0.55);
 }
-.cursor.lock .cursor-scale {
-  animation-play-state: paused;
-}
-.cursor.lock .cursor-dot {
-  background: var(--cream);
+.cursor.lock .knob-pointer {
+  transform: rotate(32deg);
+  background: var(--ember);
 }
 @media (pointer: coarse) {
   .cursor {
@@ -904,8 +871,7 @@ nav.bar {
   .mosaic .init,
   .portrait,
   .meta-row:first-child .meta-k::after,
-  .cursor-scale,
-  .cursor-ring {
+  .cursor-scale {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
