@@ -1,7 +1,7 @@
-# ROOM 909 — Developer Handoff
+# ROOM 808 — Developer Handoff
 
-A single-page promo site for ROOM 909, an electronic-music event series in
-Marrakech themed around the Roland TR-909. The centerpiece is a 3D instanced
+A single-page promo site for ROOM 808, an electronic-music event series in
+Marrakech themed around the Roland TR-808. The centerpiece is a 3D instanced
 tile grid (the "909 mosaic") that samples a shared texture, reacts to the
 cursor and to the music, and drives section navigation. This document is the
 state of play for the next developer.
@@ -173,7 +173,7 @@ real DOM toggled by an `.active` class, and the canvas reacts via the lerped
 - The menu stays visible (dimmed) inside sections so you can jump section→
   section directly. **Esc** or the **BACK** pill returns to hero.
 
-The **Rhythm Composer** link in the wordmark opens a popup about the TR-909.
+The **Rhythm Composer** link in the wordmark opens a popup about the TR-808.
 
 ---
 

@@ -1,7 +1,7 @@
-# ROOM 909 — MARRAKECH
+# ROOM 808 — MARRAKECH
 
-Single-page portfolio for ROOM 909, an electronic music event series in
-Marrakech inspired by the Roland TR-909. A slightly-3D rebuild of the 2D
+Single-page portfolio for ROOM 808, an electronic music event series in
+Marrakech inspired by the Roland TR-808. A slightly-3D rebuild of the 2D
 mosaic prototype: an instanced grid of floating tiles that sample a shared
 "aftermovie" texture and resolve under the cursor, driven by a 16-step
 sequencer clock at 128 BPM.
@@ -66,7 +66,7 @@ window.__room909.grid.setMap(new THREE.VideoTexture(video));
 ## Brand (locked)
 
 - Palette: charcoal `#141210`, cream `#EFE9DC`, ember `#FF5C00`, rust `#732103`. Nothing else.
-- Type: Share Tech Mono only — small, uppercase, wide tracking.
+- Type: Archivo (heavy grotesque) for headlines, Space Mono for labels/body — small, uppercase, wide tracking on the mono.
 
 ## Music
 
@@ -77,7 +77,7 @@ kicks phase-align the 16-step grid to the actual beat (not just the clock),
 retrigger the column flash, and bump a random scattering of tiles with an
 ember glow. Bass level breathes through the whole mosaic.
 
-The 909 is hidden under the tiles: a glyph mask the cursor "scratches" into
+The 808 is hidden under the tiles: a glyph mask the cursor "scratches" into
 view (it surges where you move and fades when you stop). The cursor also
 tilts, lifts and magnetises nearby tiles with a ripple — interaction is
 gated on pointer activity, so the scene calms when idle. To swap the track:
@@ -96,10 +96,10 @@ never breaks.
   HERO → NEXT EVENT → LINEUP → CONTACT. The active item gets an ember pill.
 - Lineup: moving across (or focusing) a name resolves that artist's
   mosaic portrait, bio and links into a full-bleed stage.
-- The wordmark's RHYTHM COMPOSER opens a popup about the TR-909.
+- The wordmark's RHYTHM COMPOSER opens a popup about the TR-808.
 - `Esc` returns to the hero.
-- Idle 909 attract: after ~5s untouched on the hero, the grid assembles
-  into a glowing 909, holds on the beat, reforms into a rotating word,
+- Idle 808 attract: after ~5s untouched on the hero, the grid assembles
+  into a glowing 808, holds on the beat, reforms into a rotating word,
   then releases. Any input interrupts and eases back. See
   `core/AttractMode.js`.
 

@@ -8,22 +8,22 @@ import { STATES } from '../core/Director.js';
 const CONTENT = {
   [STATES.NEXT_EVENT]: {
     eyebrow: 'Next Event',
-    title: 'Volume 909',
-    lede: 'Le Charleston — a historic Marrakech cabaret, transformed into ROOM 909 for one night. VOID Acoustics, full production and lighting, until sunrise.',
+    title: 'Volume 808',
+    lede: 'Le Charleston — a historic Marrakech cabaret, transformed into ROOM 808 for one night. VOID Acoustics, full production and lighting, until sunrise.',
     meta: [
       ['Date', 'Sat 12 Sep 2026 · 23:00'],
       ['Venue', 'Le Charleston · Historic Cabaret'],
       ['Location', 'Marrakech'],
       ['Sound', 'VOID Acoustics · Full Range'],
       ['Production', 'Lighting · Full Stage Build'],
-      ['Format', 'Analog · 909 In The Room']
+      ['Format', 'Analog · 808 In The Room']
     ],
     cta: ['Get Tickets', 'https://shotgun.live/'] // TODO: real ticket link
   },
   [STATES.LINEUP]: {
     eyebrow: 'Lineup',
     title: 'Lineup',
-    lede: 'The bill for Volume 909. Move across a name.',
+    lede: 'The bill for Volume 808. Move across a name.',
     lineup: [
       {
         name: 'FRAUSARP',
@@ -50,11 +50,11 @@ const CONTENT = {
     title: 'Say Less',
     lede: 'Bookings, guestlist, press.',
     meta: [
-      ['Email', 'ROOM909@MARRAKECH.NET'],
-      ['Instagram', '@ROOM909'],
-      ['Press', 'PRESS@ROOM909.NET']
+      ['Email', 'ROOM808@MARRAKECH.NET'],
+      ['Instagram', '@ROOM808'],
+      ['Press', 'PRESS@ROOM808.NET']
     ],
-    cta: ['Open Mail', 'mailto:room909@marrakech.net']
+    cta: ['Open Mail', 'mailto:room808@marrakech.net']
   }
 };
 

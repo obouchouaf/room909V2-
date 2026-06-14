@@ -1,7 +1,7 @@
 /**
  * Clock909 — the heartbeat of the scene.
  *
- * One bar of sixteen 16th-note steps at 128 BPM (a classic TR-909 grid).
+ * One bar of sixteen 16th-note steps at 128 BPM (a classic TR-808 grid).
  * It is the single source of truth: the same clock drives the shader
  * uniforms (column pulse) and the DOM step cells, so they can never drift.
  *

@@ -14,7 +14,7 @@ export function initCursor() {
   const el = document.createElement('div');
   el.className = 'cursor';
   el.setAttribute('aria-hidden', 'true');
-  // a TR-909 knob: charcoal body, ember collar, a pointer indicator
+  // a TR-808 knob: charcoal body, ember collar, a pointer indicator
   el.innerHTML =
     '<span class="cursor-scale">' +
     '<span class="knob"></span>' +

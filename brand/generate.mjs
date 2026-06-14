@@ -25,12 +25,13 @@ const C = {
   dim: 'rgba(239,233,220,0.55)',
   line: 'rgba(239,233,220,0.22)'
 };
-const FONT = `'Share Tech Mono', ui-monospace, monospace`;
+const FONT = `'Space Mono', ui-monospace, monospace`; // labels / body
+const DISPLAY = `'Archivo', 'Space Mono', sans-serif`; // big headlines
 
 // editable content — change these, re-run
 const CONTENT = {
-  presents: 'ROOM 909 PRESENTS',
-  title: 'VOLUME 909',
+  presents: 'ROOM 808 PRESENTS',
+  title: 'VOLUME 808',
   date: '12 SEP 2026',
   venue: 'LE CHARLESTON',
   city: 'MARRAKECH',
@@ -100,14 +101,14 @@ function sequencer(x, y, cell, gap, lit = 0) {
   return out + '</g>';
 }
 
-function text(x, y, s, { size = 24, color = C.cream, ls = 6, anchor = 'start', weight = 'normal' } = {}) {
-  return `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" letter-spacing="${ls}" fill="${color}" font-weight="${weight}" text-anchor="${anchor}" style="text-transform:uppercase">${s}</text>`;
+function text(x, y, s, { size = 24, color = C.cream, ls = 6, anchor = 'start', weight = 'normal', font = FONT } = {}) {
+  return `<text x="${x}" y="${y}" font-family="${font}" font-size="${size}" letter-spacing="${ls}" fill="${color}" font-weight="${weight}" text-anchor="${anchor}" style="text-transform:uppercase">${s}</text>`;
 }
 
 function svg(w, h, body) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
 <defs>
-<style>@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&amp;display=swap');</style>
+<style>@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;800;900&amp;family=Space+Mono:wght@400;700&amp;display=swap');</style>
 <radialGradient id="vig" cx="50%" cy="42%" r="75%">
 <stop offset="55%" stop-color="${C.charcoal}" stop-opacity="0"/>
 <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>
@@ -123,10 +124,10 @@ ${body}
 </svg>`;
 }
 
-// big 909 watermark with a soft ember glow
+// big 808 watermark with a soft ember glow
 function bigNine(x, y, size, opacity = 1) {
-  return `<g opacity="${opacity}" filter="url(#none)">
-<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" letter-spacing="${size * 0.06}" fill="${C.ember}" text-anchor="middle" style="text-transform:uppercase">909</text></g>`;
+  return `<g opacity="${opacity}">
+<text x="${x}" y="${y}" font-family="${DISPLAY}" font-weight="900" font-size="${size}" letter-spacing="${size * 0.01}" fill="${C.ember}" text-anchor="middle" style="text-transform:uppercase">808</text></g>`;
 }
 
 // ---- templates -------------------------------------------------------
@@ -137,7 +138,7 @@ function profile() {
   let b = '';
   b += mosaic(0, 0, W, W, 18, 18, 11, { opacity: 0.16 });
   b += `<rect width="${W}" height="${W}" fill="url(#emberGlow)"/>`;
-  b += text(W / 2, 430, 'ROOM', { size: 96, color: C.cream, ls: 40, anchor: 'middle' });
+  b += text(W / 2, 430, 'ROOM', { size: 150, color: C.cream, ls: 4, anchor: 'middle', font: DISPLAY, weight: '900' });
   b += bigNine(W / 2, 760, 360);
   b += text(W / 2, 880, CONTENT.city, { size: 34, color: C.dim, ls: 22, anchor: 'middle' });
   return svg(W, W, b);
@@ -147,13 +148,13 @@ function profile() {
 function post() {
   const W = 1080;
   let b = '';
-  // mosaic texture down the right third, faint 909 inside it
+  // mosaic texture down the right third, faint 808 inside it
   b += mosaic(640, 0, 440, W, 14, 30, 7, { opacity: 0.9 });
   b += `<rect x="640" y="0" width="440" height="${W}" fill="${C.charcoal}" opacity="0.35"/>`;
   b += bigNine(860, 620, 300, 0.5);
 
   b += text(96, 150, CONTENT.presents, { size: 26, color: C.ember, ls: 12 });
-  b += text(96, 330, CONTENT.title, { size: 92, color: C.cream, ls: 6 });
+  b += text(96, 330, CONTENT.title, { size: 118, color: C.cream, ls: -2, font: DISPLAY, weight: '900' });
   b += `<line x1="96" y1="372" x2="560" y2="372" stroke="${C.ember}" stroke-width="2"/>`;
   b += text(96, 470, CONTENT.date, { size: 76, color: C.ember, ls: 4 });
   b += text(96, 540, `${CONTENT.venue} · ${CONTENT.city}`, { size: 30, color: C.cream, ls: 8 });
@@ -177,7 +178,7 @@ function story() {
   b += bigNine(W / 2, 1560, 460, 0.45);
 
   b += text(W / 2, 360, CONTENT.presents, { size: 30, color: C.ember, ls: 14, anchor: 'middle' });
-  b += text(W / 2, 560, CONTENT.title, { size: 120, color: C.cream, ls: 6, anchor: 'middle' });
+  b += text(W / 2, 560, CONTENT.title, { size: 150, color: C.cream, ls: -2, anchor: 'middle', font: DISPLAY, weight: '900' });
   b += `<line x1="${W / 2 - 230}" y1="610" x2="${W / 2 + 230}" y2="610" stroke="${C.ember}" stroke-width="2"/>`;
   b += text(W / 2, 760, CONTENT.date, { size: 96, color: C.ember, ls: 4, anchor: 'middle' });
   b += text(W / 2, 840, `${CONTENT.venue} · ${CONTENT.city}`, { size: 34, color: C.cream, ls: 10, anchor: 'middle' });
@@ -200,8 +201,8 @@ function artist(name, slot, handle, seed) {
   b += `<rect x="140" y="170" width="800" height="640" fill="none" stroke="${C.line}" stroke-width="1.5"/>`;
   b += `<rect x="140" y="170" width="800" height="640" fill="url(#emberGlow)"/>`;
 
-  b += text(96, 120, 'LINE-UP · ROOM 909', { size: 24, color: C.ember, ls: 12 });
-  b += text(96, 940, name, { size: 92, color: C.cream, ls: 4 });
+  b += text(96, 120, 'LINE-UP · ROOM 808', { size: 24, color: C.ember, ls: 12 });
+  b += text(96, 940, name, { size: 112, color: C.cream, ls: -2, font: DISPLAY, weight: '900' });
   b += `<line x1="96" y1="985" x2="520" y2="985" stroke="${C.ember}" stroke-width="2"/>`;
   b += text(96, 1060, slot, { size: 34, color: C.ember, ls: 8 });
   b += text(96, 1120, handle, { size: 28, color: C.dim, ls: 6 });
@@ -214,7 +215,7 @@ function artist(name, slot, handle, seed) {
 function swatches() {
   const W = 1080;
   const H = 1080;
-  let b = text(96, 130, 'ROOM 909 · IDENTITY', { size: 34, color: C.cream, ls: 10 });
+  let b = text(96, 130, 'ROOM 808 · IDENTITY', { size: 34, color: C.cream, ls: 10 });
   const items = [
     ['CHARCOAL', C.charcoal, '#141210'],
     ['CREAM', C.cream, '#EFE9DC'],

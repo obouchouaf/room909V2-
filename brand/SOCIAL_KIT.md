@@ -1,4 +1,4 @@
-# ROOM 909 — Social Visual Identity Kit
+# ROOM 808 — Social Visual Identity Kit
 
 Everything below is derived from the website. Use it as the single source of
 truth for Instagram / TikTok / posters / tickets. Paste any section into
@@ -6,7 +6,7 @@ Claude (or an image model) to generate on-brand assets.
 
 Philosophy: **confidence over decoration, restraint over layering.** Mostly
 charcoal darkness. Ember used like a spark, never a flood. The machine (the
-TR-909) is the whole idea — every layout is a 16-step grid, every image is
+TR-808) is the whole idea — every layout is a 16-step grid, every image is
 made of tiles.
 
 ---
@@ -18,18 +18,18 @@ made of tiles.
 |---|---|---|
 | Charcoal | `#141210` | background, ~80% of every layout |
 | Cream | `#EFE9DC` | primary text, highlights |
-| Ember | `#FF5C00` | ONE accent per layout — the spark (909, date, CTA) |
+| Ember | `#FF5C00` | ONE accent per layout — the spark (808, date, CTA) |
 | Rust | `#732103` | midtone, mosaic tiles, dividers |
 
 Rough ratio per layout: **charcoal 80 · cream 14 · rust/ember 6**. If a
 layout has two ember elements, you've probably got one too many.
 
-### Type — Share Tech Mono, only
+### Type — Archivo (display) + Space Mono (body)
 - Always **UPPERCASE**, **wide letter-spacing** (0.12–0.3em), small sizes.
 - Monospace alignment is a feature — left-align, let things grid up.
 - Hierarchy by *spacing and colour*, not by weight (it's a single weight).
 - Numbers matter: dates, times, BPM, coordinates are design elements.
-- Google Fonts: `Share+Tech+Mono`. Fallback: `ui-monospace, monospace`.
+- Google Fonts: `Archivo` (wght 500-900) for big headlines, `Space+Mono` for labels/body.
 
 ### Voice
 Terse, lowercase-in-captions-or-all-caps, machine-poetic. Short lines. No
@@ -42,10 +42,10 @@ exclamation marks. Examples:
 
 ## 2. Logo & wordmark
 
-- Primary wordmark: **ROOM 909** — "ROOM" in cream, "909" in ember.
-- Reductions: `909` alone (ember) for avatars/stamps; `R909` is not used.
+- Primary wordmark: **ROOM 808** — "ROOM" in cream, "808" in ember.
+- Reductions: `808` alone (ember) for avatars/stamps; `R808` is not used.
 - Always on charcoal. Clear space = the cap-height of the 9 on all sides.
-- Min legible size for "ROOM 909": ~120px wide. For `909` stamp: ~64px.
+- Min legible size for "ROOM 808": ~120px wide. For `808` stamp: ~64px.
 - Optional lockup line beneath: `MARRAKECH · 31.62°N 7.99°W · RHYTHM COMPOSER`.
 
 ---
@@ -56,7 +56,7 @@ exclamation marks. Examples:
    charcoal, occasional rust, rare ember/cream sparks). It's the "footage"
    the whole brand is built from. Use as texture in a corner/edge, or as the
    fill of a portrait.
-2. **The hidden 909** — a large ember `909` half-buried in the mosaic /
+2. **The hidden 808** — a large ember `808` half-buried in the mosaic /
    shadow, like it's resolving out of the tiles.
 3. **The 16-step sequencer** — a row of 16 small squares, every 4th
    outlined in ember (accents), one filled ember (the active step). Signature
@@ -88,11 +88,11 @@ cd brand
 node generate.mjs            # edit the CONTENT block first
 ```
 Export an SVG → PNG:
-- Open in a browser, screenshot at 2× (Share Tech Mono loads from Google),
+- Open in a browser, screenshot at 2× (the fonts load from Google),
 - or `npx svgexport in.svg out.png 2x`,
 - or drop into Figma / Illustrator / Inkscape.
 
-> Note: the SVGs reference Share Tech Mono via `@import`; for a perfect
+> Note: the SVGs reference Archivo + Space Mono via `@import`; for a perfect
 > export install the font locally or open in a browser that fetches it.
 
 ---
@@ -100,9 +100,9 @@ Export an SVG → PNG:
 ## 5. Canonical content blocks
 
 ```
-EVENT       VOLUME 909
+EVENT       VOLUME 808
 DATE        12 SEP 2026 · 23:00
-VENUE       LE CHARLESTON — historic cabaret, rewired into ROOM 909
+VENUE       LE CHARLESTON — historic cabaret, rewired into ROOM 808
 CITY        MARRAKECH · 31.62°N 7.99°W
 SOUND       VOID ACOUSTICS · full range
 PRODUCTION  full stage build · lighting
@@ -112,45 +112,45 @@ CTA         TICKETS · SHOTGUN
 ```
 
 Caption starter:
-> ROOM 909 — VOLUME 909.
+> ROOM 808 — VOLUME 808.
 > 12 sep · le charleston, marrakech.
 > hashashin · frausarp. void acoustics. until sunrise.
-> every tile is a step. 909.
+> every tile is a step. 808.
 
-Hashtags (sparingly): `#room909 #marrakech #techno #lecharleston #void`
+Hashtags (sparingly): `#room808 #marrakech #techno #lecharleston #void`
 
 ---
 
 ## 6. Ready-to-paste Claude prompts
 
 ### A. Generate a new post layout (vector/SVG)
-> You are designing for ROOM 909, an electronic-music event series in
-> Marrakech themed on the Roland TR-909. Locked palette: charcoal #141210
+> You are designing for ROOM 808, an electronic-music event series in
+> Marrakech themed on the Roland TR-808. Locked palette: charcoal #141210
 > (background, ~80%), cream #EFE9DC (text), ember #FF5C00 (one accent only),
-> rust #732103 (midtone). Type: Share Tech Mono, uppercase, wide tracking,
+> rust #732103 (midtone). Type: Archivo (heavy) for headlines, Space Mono for labels, uppercase, wide tracking,
 > small sizes. Motifs: a tile mosaic of small palette squares, a large ember
-> "909" half-hidden in it, a 16-step sequencer row (every 4th outlined ember,
+> "808" half-hidden in it, a 16-step sequencer row (every 4th outlined ember,
 > one filled), the coordinates 31.62°N 7.99°W. Restraint over decoration.
 > Produce a 1080×1080 SVG announcing: [PASTE the content block]. Left-aligned
 > grid, charcoal negative space, exactly one ember focal point.
 
 ### B. Write captions
 > Voice: terse, machine-poetic, no exclamation marks, short lines, lowercase.
-> Brand: ROOM 909, Marrakech, TR-909 theme, venue Le Charleston, sound by
+> Brand: ROOM 808, Marrakech, TR-808 theme, venue Le Charleston, sound by
 > VOID Acoustics. Write 5 Instagram captions for [announce / lineup / 1-week /
-> tonight / after-movie], each ≤ 3 lines, ending on a 909 motif.
+> tonight / after-movie], each ≤ 3 lines, ending on a 808 motif.
 
 ### C. Image-model prompt (Midjourney / DALL·E style) for the *mood*
 > Dark techno cabaret in Marrakech, near-black charcoal room, thick haze, a
-> single ember-orange strobe, a Roland TR-909 glowing on a table, grain,
+> single ember-orange strobe, a Roland TR-808 glowing on a table, grain,
 > anamorphic, restrained, cinematic, monochrome charcoal with one ember
 > accent, no text. 4:5.
 > (Use generated imagery only as the *footage* layer — then overlay the
-> mosaic + Share Tech Mono type from this kit on top.)
+> mosaic + Archivo/Space Mono type from this kit on top.)
 
 ### D. Artist announce
-> Make a 1080×1350 ROOM 909 artist card for [NAME], set time [SLOT], handle
-> [HANDLE]. Top-left eyebrow "LINE-UP · ROOM 909" in ember. The portrait is a
+> Make a 1080×1350 ROOM 808 artist card for [NAME], set time [SLOT], handle
+> [HANDLE]. Top-left eyebrow "LINE-UP · ROOM 808" in ember. The portrait is a
 > tile-mosaic block (charcoal shadows, ember midtones, cream highlights).
 > Large cream name, ember divider, ember set-time, dim handle, a 16-step
 > sequencer footer, and "LE CHARLESTON · 12 SEP 2026". Same locked palette
@@ -166,4 +166,4 @@ photos as tile-mosaics.
 
 **Don't** — gradients beyond a subtle ember glow; multiple accent colours;
 rounded friendly type; centre-everything clutter; drop shadows; emoji in the
-mark; stretch the mono font; use any colour outside the four.
+mark; stretch the fonts; use any colour outside the four.

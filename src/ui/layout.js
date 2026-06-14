@@ -13,7 +13,7 @@ import { buildSections } from './sections.js';
  * App reacts to state changes for the canvas transition.
  */
 export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMotion } = {}) {
-  // ---- Rhythm Composer popup (the TR-909 reference) ----
+  // ---- Rhythm Composer popup (the TR-808 reference) ----
   const popup = buildPopup();
 
   // ---- bottom-centre nav bar ----
@@ -76,11 +76,11 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
     }
   };
 
-  // ---- wordmark (bottom-left, ROOM 909 reads clearly) ----
+  // ---- wordmark (bottom-left, ROOM 808 reads clearly) ----
   const mark = document.createElement('div');
   mark.className = 'mark';
   mark.innerHTML =
-    '<b>ROOM <span class="nine">909</span></b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span>';
+    '<b>ROOM <span class="nine">808</span></b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span>';
   const rc = button('Rhythm Composer', () => popup.open());
   rc.className = 'rc-link';
   mark.appendChild(rc);
@@ -257,7 +257,7 @@ function button(label, onClick) {
 }
 
 /**
- * The Rhythm Composer popup — a small panel explaining the TR-909 the
+ * The Rhythm Composer popup — a small panel explaining the TR-808 the
  * whole series is named for. Opens from the wordmark, closes on the X,
  * Escape, or a click on the backdrop.
  */
@@ -271,13 +271,14 @@ function buildPopup() {
     '<div class="popup-panel">' +
     '<button type="button" class="popup-x" aria-label="Close">×</button>' +
     '<div class="popup-eyebrow">Rhythm Composer</div>' +
-    '<div class="popup-mark">TR-<span class="nine">909</span></div>' +
-    '<p>Roland built the TR-909 in 1983 and discontinued it two years ' +
-    'later. It flopped. Then house and techno found it — its kick, its ' +
-    'open hi-hat, its sixteen steps became the spine of the music.</p>' +
-    '<p>ROOM 909 is built around that machine: one room, one sequencer, ' +
+    '<div class="popup-mark">TR-<span class="nine">808</span></div>' +
+    '<p>Roland built the TR-808 in 1980 and pulled it three years later. ' +
+    'It was a commercial failure. Then the music found it — its deep kick, ' +
+    'its cymbal, its sixteen steps became the backbone of electro, hip-hop ' +
+    'and everything bass.</p>' +
+    '<p>ROOM 808 is built around that machine: one room, one sequencer, ' +
     'sixteen steps a bar, analog in the air. The grid you are looking at ' +
-    'is the 909 — every tile is a step.</p>' +
+    'is the 808 — every tile is a step.</p>' +
     '</div>';
 
   const close = () => el.classList.remove('show');

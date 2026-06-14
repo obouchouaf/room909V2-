@@ -108,8 +108,8 @@ export class App {
 
     // the centred info reveal cycles through these each time the cursor
     // enters the centred box (hover the spot to read it)
-    this._infos = ['909', '12 SEP 2026', 'LE CHARLESTON', 'MARRAKECH'];
-    this._infoIndex = -1; // first hover lands on 909
+    this._infos = ['808', '12 SEP 2026', 'LE CHARLESTON', 'MARRAKECH'];
+    this._infoIndex = -1; // first hover lands on 808
     this._wasInBox = false;
 
     // sequencer DOM follows the same clock
