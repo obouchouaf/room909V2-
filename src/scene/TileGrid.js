@@ -99,7 +99,7 @@ const VERT = /* glsl */ `
     region = region * region * (3.0 - 2.0 * region);
     vec2 prn = uPointer.xy / max(uRevealHalf, vec2(1e-3));
     float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside
-    vReveal = clamp(max(region * overCursor, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    vReveal = clamp(max(region * overCursor * (1.0 - uTransition), uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // flatten the whole soft ellipse so the word sits coplanar — no depth
     // parallax, no doubling. Particles outside the ellipse stay interactive.
@@ -189,7 +189,6 @@ const VERT = /* glsl */ `
 const FRAG = /* glsl */ `
   precision highp float;
   uniform sampler2D uMap;
-  uniform sampler2D uMark;   // the 909 glyph mask
   uniform vec3  uEmber;
   uniform float uTransition;
   uniform float uTime;
@@ -229,17 +228,11 @@ const FRAG = /* glsl */ `
     col.g = texture2D(uMap, sampUV).g;
     col.b = texture2D(uMap, sampUV - cao).b;
 
-    // (no hover brightening — the resolve sharpens via reduced scatter only,
-    // so tiles under the cursor don't glare)
+    // (no hover brightening — the resolve sharpens via reduced scatter only)
 
-    // scratch reveal: the hidden label under the cursor surfaces. The local
-    // surround dims hard and the text burns bright cream, so each band of
-    // info reads clearly (MARRAKECH / 909 / LE CHARLESTON / coordinates).
-    float mark = texture2D(uMark, vFullUV).r;
-    // organic: a soft settling of the surround + a calm cream word kept BELOW
-    // the bloom threshold, so it reads crisp with no glow/ghost halo
-    col = mix(col, col * 0.42, vReveal * (1.0 - mark));        // soft settle
-    col = mix(col, vec3(0.66, 0.63, 0.54), vReveal * mark);    // calm cream, no bloom
+    // soft settle of the hover zone — a dimmed patch the crisp DOM info text
+    // sits on top of (rendering text through tiles is never readable enough)
+    col = mix(col, col * 0.32, vReveal);
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -257,13 +250,6 @@ const FRAG = /* glsl */ `
     // dim the scattered cloud so section text stays readable over it
     col *= 1.0 - uTransition * 0.5;
 
-    // idle 909 attract: everything fades to near-black except the glyph,
-    // which burns ember and pulses on the beat during the hold
-    float glyphA = texture2D(uMark, vFullUV).r;
-    vec3 lit = mix(col * 0.05, uEmber, glyphA);
-    lit += vec3(1.0, 0.6, 0.25) * glyphA * (0.45 + uAttractPulse * 0.7);
-    col = mix(col, lit, uAttract);
-
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -277,10 +263,6 @@ export class TileGrid {
 
     // thin box — real depth so edges catch light when tilted
     const geo = new THREE.BoxGeometry(1, 1, 0.12);
-
-    // the glyph mask: "909" for the cursor scratch, swapped to words by the
-    // idle attract animation
-    this._mark = makeMark();
 
     this.uniforms = {
       uTime: { value: 0 },
@@ -304,7 +286,6 @@ export class TileGrid {
       uAttractPulse: { value: 0 },
       uReduced: { value: reduced ? 1 : 0 },
       uMap: { value: null },
-      uMark: { value: this._mark.texture },
       uEmber: { value: new THREE.Color(0xff5c00) }
     };
 
@@ -389,16 +370,12 @@ export class TileGrid {
     this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
     // tile size in texture UV, so the mask samples crisply across tiles
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
-    // the centred reveal ellipse — sized to give the word room to read
+    // the centred reveal ellipse — where the DOM info text appears on hover
     this.uniforms.uRevealHalf.value.set(worldW * 0.3, worldH * 0.12);
-    // redraw the centred word at the screen aspect (no stretch)
-    this._mark.resize(worldW / worldH);
   }
 
-  /** swap the glyph mask text (used by the idle attract animation). */
-  setMarkText(text) {
-    this._mark.setText(text);
-  }
+  // no-op kept so the (disabled) attract path stays harmless
+  setMarkText() {}
 
   update(opts) {
     const u = this.uniforms;
@@ -420,62 +397,4 @@ export class TileGrid {
     this.mesh.geometry.dispose();
     this.material.dispose();
   }
-}
-
-/**
- * The hidden-content mask: a canvas holding ONE centred word at a time
- * (909 / the date / the venue / the city). The App cycles the word on each
- * new scratch via setText(); the shader reveals it inside a centred box so
- * only that area resolves and the rest of the grid stays interactive.
- *
- * The canvas is redrawn at the screen's aspect ratio (see resize) so the
- * word is NOT horizontally stretched when sampled across the wide grid.
- */
-function makeMark() {
-  const c = document.createElement('canvas');
-  c.width = 1024;
-  c.height = 1024;
-  const g = c.getContext('2d');
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.flipY = false;
-  let current = '909';
-
-  const draw = () => {
-    g.fillStyle = '#000';
-    g.fillRect(0, 0, c.width, c.height);
-    g.fillStyle = '#fff';
-    g.strokeStyle = '#fff';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.lineJoin = 'round';
-    // fit the single word to the (smaller) centred reveal box
-    let size = Math.min(0.2 * c.height, 0.42 * c.width);
-    g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-    while (g.measureText(current).width > c.width * 0.5 && size > 8) {
-      size -= 4;
-      g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-    }
-    g.lineWidth = Math.max(2, size * 0.07);
-    g.strokeText(current, c.width / 2, c.height / 2);
-    g.fillText(current, c.width / 2, c.height / 2);
-    tex.needsUpdate = true;
-  };
-
-  const setText = (text) => {
-    if (text === current) return;
-    current = text;
-    draw();
-  };
-  const resize = (aspect) => {
-    const h = Math.round(Math.min(4096, Math.max(384, c.width / aspect)));
-    if (h !== c.height) c.height = h;
-    draw();
-  };
-
-  draw();
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(draw).catch(() => {});
-  }
-  return { texture: tex, resize, setText };
 }

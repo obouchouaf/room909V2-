@@ -102,7 +102,17 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   prompt.className = 'prompt';
   prompt.innerHTML =
     '<span class="q">What brings you here?</span>' +
-    '<span class="hint">— scratch the grid · pick a room below —</span>';
+    '<span class="hint">— scratch the centre · pick a room below —</span>';
+
+  // ---- centred reveal text (crisp, resolves char-by-char on hover) ----
+  const reveal = document.createElement('div');
+  reveal.className = 'reveal-text';
+  reveal.setAttribute('aria-live', 'polite');
+  // a faint pulsing marker that shows where to hover, fades once discovered
+  const revealHint = document.createElement('div');
+  revealHint.className = 'reveal-hint';
+  revealHint.setAttribute('aria-hidden', 'true');
+  const setReveal = makeReveal(reveal, revealHint);
 
   // ---- get tickets — visible on the front page ----
   const tickets = document.createElement('a');
@@ -141,7 +151,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, mark, prompt, tickets, progress, navIndex, motion, popup.el);
+  root.append(nav, mark, prompt, revealHint, reveal, tickets, progress, navIndex, motion, popup.el);
 
   // No intro gate: the music starts on the visitor's first real gesture
   // (click or key — the interactions browsers accept for audio unlock).
@@ -178,7 +188,64 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
     if (e.key === 'Escape' && director.isSection()) director.home();
   });
 
-  return { cells, setMeter };
+  return { cells, setMeter, setReveal };
+}
+
+/**
+ * The centred reveal text: crisp Share Tech Mono that resolves character by
+ * character (a brief scramble) when a new word comes in, then fades out when
+ * the cursor leaves the centre. Returns setReveal(text, show).
+ */
+function makeReveal(el, hint) {
+  const GLYPHS = '0123456789ABCDEFGHJKLMNPRSTUWXYZ#%·';
+  let shown = false;
+  let cur = '';
+  let raf = 0;
+  let discovered = false;
+
+  const scrambleTo = (target) => {
+    cancelAnimationFrame(raf);
+    const start = performance.now();
+    const dur = 420;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      el.textContent = target;
+      return;
+    }
+    const step = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      const locked = p * target.length;
+      let out = '';
+      for (let i = 0; i < target.length; i++) {
+        const ch = target[i];
+        if (ch === ' ') out += ' ';
+        else if (i < locked) out += ch;
+        else out += GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      }
+      el.textContent = out;
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  };
+
+  return (text, show) => {
+    if (show) {
+      if (!discovered && hint) {
+        discovered = true;
+        hint.classList.add('gone');
+      }
+      if (!shown || cur !== text) {
+        shown = true;
+        cur = text;
+        el.classList.add('show');
+        scrambleTo(text);
+      }
+    } else if (shown) {
+      shown = false;
+      cur = '';
+      el.classList.remove('show');
+    }
+  };
 }
 
 function button(label, onClick) {

@@ -93,7 +93,7 @@ export class App {
     this._calm = false;
 
     // ---- UI ----
-    const { cells, setMeter } = buildLayout(ui, this.director, {
+    const { cells, setMeter, setReveal } = buildLayout(ui, this.director, {
       onGyro: () => this.pointer.requestGyro(),
       audio: this.audio,
       onEnter: () => this.audio.start(),
@@ -103,6 +103,7 @@ export class App {
     });
     this.cells = cells;
     this.setMeter = setMeter;
+    this.setReveal = setReveal;
     this.cursorPulse = null; // wired from main.js
 
     // the centred info reveal cycles through these each time the cursor
@@ -203,20 +204,22 @@ export class App {
     this.pointer.tick(this.reduced ? 1 : Math.min(1, dt * 6));
 
     // cycle the centred info each time the cursor ENTERS the centred zone:
-    // 909 → date → venue → city. Hover the spot to read; leave to hide.
-    if (!still) {
+    // 909 → date → venue → city. The grid dims that patch; the readable info
+    // is rendered as crisp DOM text on top (see layout.setReveal).
+    let inZone = false;
+    if (!still && this.director.state === STATES.HERO) {
       const half = this.grid.uniforms.uRevealHalf.value;
       const ex = this.pointer.world.x / half.x;
       const ey = this.pointer.world.y / half.y;
-      const inZone = ex * ex + ey * ey < 1.0;
+      inZone = ex * ex + ey * ey < 1.0;
       if (inZone && !this._wasInBox) {
         this._wasInBox = true;
         this._infoIndex = (this._infoIndex + 1) % this._infos.length;
-        this.grid.setMarkText(this._infos[this._infoIndex]);
       } else if (!inZone) {
         this._wasInBox = false;
       }
     }
+    if (this.setReveal) this.setReveal(this._infos[Math.max(0, this._infoIndex)], inZone);
 
     // idle 909 attract — eligible only on HERO with no recent interaction
     const interacting =
