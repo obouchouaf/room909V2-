@@ -56,11 +56,24 @@ export function initCursor() {
     if (e.target.closest && e.target.closest(interactive)) el.classList.remove('lock');
   });
 
-  const loop = () => {
+  const scale = el.querySelector('.cursor-scale');
+  let kick = 0;
+
+  const loop = (now) => {
     cx += (tx - cx) * 0.28;
     cy += (ty - cy) * 0.28;
     el.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
+    // gentle idle breathing + a punch on each detected kick (driven by the App)
+    const idle = 0.95 + 0.04 * Math.sin(now * 0.004);
+    scale.style.transform = `scale(${(idle + kick * 0.24).toFixed(3)})`;
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
+
+  // the App feeds the real detected kick here so the knob pulses on the beat
+  return {
+    pulse: (k) => {
+      kick = k || 0;
+    }
+  };
 }

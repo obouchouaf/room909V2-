@@ -89,13 +89,21 @@ export class App {
     window.addEventListener('keydown', bump);
     window.addEventListener('pointerdown', bump);
 
+    // ---- runtime motion (calm) toggle for accessibility ----
+    this._calm = false;
+
     // ---- UI ----
-    const { cells } = buildLayout(ui, this.director, {
+    const { cells, setMeter } = buildLayout(ui, this.director, {
       onGyro: () => this.pointer.requestGyro(),
       audio: this.audio,
-      onEnter: () => this.audio.start()
+      onEnter: () => this.audio.start(),
+      onToggleMotion: (off) => {
+        this._calm = off;
+      }
     });
     this.cells = cells;
+    this.setMeter = setMeter;
+    this.cursorPulse = null; // wired from main.js
 
     // sequencer DOM follows the same clock
     this._litCell = 0;
@@ -167,18 +175,23 @@ export class App {
     this._last = now;
     if (dt > 0.1) dt = 0.1; // clamp after tab-switch stalls
 
-    const time = this.reduced ? 20 : now;
+    // "still" = reduced motion preference OR the user paused motion. The
+    // music keeps playing and the meter keeps moving either way.
+    const still = this.reduced || this._calm;
+    if (still) this._frozen = this._frozen || now;
+    else this._frozen = 0;
+    const time = still ? this._frozen || 20 : now;
 
-    // audio analysis first — the clock reads its synced transport
+    // audio analysis always runs (drives the meter + cursor pulse)
     this.audio.tick(dt);
     this.clock.tick(dt);
 
-    // transition lerp toward the active state's target
+    const kick = still ? 0 : this.audio.kick;
+
+    // transition lerp toward the active state's target (sections still work)
     const target = this.director.transitionTarget;
-    this._transition += (target - this._transition) * (this.reduced ? 1 : Math.min(1, dt * 4.5));
-    // section seed swirl
-    this._sectionSeed +=
-      (this._sectionSeedTarget - this._sectionSeed) * (this.reduced ? 1 : Math.min(1, dt * 3));
+    this._transition += (target - this._transition) * Math.min(1, dt * 4.5);
+    this._sectionSeed += (this._sectionSeedTarget - this._sectionSeed) * Math.min(1, dt * 3);
 
     // input
     this.pointer.tick(this.reduced ? 1 : Math.min(1, dt * 6));
@@ -191,7 +204,7 @@ export class App {
     this.attract.update(dt, {
       hero: this.director.state === STATES.HERO,
       interacting,
-      kick: this.reduced ? 0 : this.audio.kick
+      kick
     });
 
     // footage stays alive
@@ -205,14 +218,18 @@ export class App {
       env: this.clock.env,
       transition: this._transition,
       sectionSeed: this._sectionSeed,
-      kick: this.reduced ? 0 : this.audio.kick,
-      audioLevel: this.reduced ? 0 : this.audio.level,
-      active: this.pointer.strength,
-      velocity: this.reduced ? 0 : this.pointer.velocity,
+      kick,
+      audioLevel: still ? 0 : this.audio.level,
+      active: still ? 0 : this.pointer.strength,
+      velocity: still ? 0 : this.pointer.velocity,
       attract: this.attract.value,
       attractPulse: this.attract.pulse
     });
     this.cameraRig.update(this.pointer.parallax, this.reduced ? 1 : Math.min(1, dt * 3), this._transition);
+
+    // live audio UI: VU meter + cursor knob pulse (always, even when paused)
+    if (this.setMeter) this.setMeter(this.audio.level, this.audio.kick);
+    if (this.cursorPulse) this.cursorPulse(this.reduced ? 0 : this.audio.kick);
 
     // render
     this.composer.render(time);

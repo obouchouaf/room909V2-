@@ -7,7 +7,9 @@ const ui = document.getElementById('ui');
 
 const app = new App({ canvas, ui });
 app.start();
-initCursor();
+
+const cursor = initCursor();
+if (cursor) app.cursorPulse = cursor.pulse;
 
 // expose for debugging / dropping in real footage from the console:
 //   app.grid.setMap(new THREE.VideoTexture(videoEl))

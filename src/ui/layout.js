@@ -12,13 +12,14 @@ import { buildSections } from './sections.js';
  * Everything is real, focusable DOM. Navigation flips Director state; the
  * App reacts to state changes for the canvas transition.
  */
-export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
+export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMotion } = {}) {
   // ---- Rhythm Composer popup (the TR-909 reference) ----
   const popup = buildPopup();
 
   // ---- bottom-centre nav bar ----
   const nav = document.createElement('nav');
   nav.className = 'bar';
+  nav.id = 'nav';
   nav.setAttribute('aria-label', 'Primary');
 
   const navItems = [
@@ -27,6 +28,8 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
     ['Lineup', STATES.LINEUP],
     ['Contact', STATES.CONTACT]
   ];
+  const ORDER = navItems.map(([, s]) => s);
+  const LABELS = Object.fromEntries(navItems);
   const navButtons = new Map();
   for (const [label, state] of navItems) {
     const b = button(label, () => director.go(state));
@@ -35,20 +38,43 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
     nav.appendChild(b);
   }
 
-  // sound toggle — circle indicator: filled when on, hollow when muted
-  const sound = button('', () => {
-    if (!audio) return;
-    const muted = audio.toggleMute();
-    reflectSound(muted);
-  });
+  // sound toggle with a live VU meter that moves with the music
+  const sound = document.createElement('button');
+  sound.type = 'button';
   sound.className = 'bar-item bar-sound';
   sound.setAttribute('aria-label', 'Toggle sound');
+  const sLabel = document.createElement('span');
+  sLabel.textContent = 'Sound';
+  const sDot = document.createElement('span');
+  sDot.className = 'dot';
+  const meterEl = document.createElement('span');
+  meterEl.className = 'meter';
+  const meterBars = [];
+  for (let i = 0; i < 4; i++) {
+    const bar = document.createElement('i');
+    meterEl.appendChild(bar);
+    meterBars.push(bar);
+  }
+  sound.append(sLabel, sDot, meterEl);
   const reflectSound = (muted) => {
-    sound.innerHTML = `Sound <span class="dot${muted ? ' off' : ''}"></span>`;
+    sDot.classList.toggle('off', muted);
     sound.setAttribute('aria-pressed', String(!muted));
   };
+  sound.addEventListener('click', () => {
+    if (!audio) return;
+    reflectSound(audio.toggleMute());
+  });
   reflectSound(audio ? audio.muted : false);
   nav.appendChild(sound);
+
+  /** called each frame by the App with the live audio level + kick. */
+  const setMeter = (level, kick) => {
+    const v = Math.max(level, kick * 0.8);
+    for (let i = 0; i < meterBars.length; i++) {
+      const h = Math.min(1, v * (0.55 + i * 0.16) + kick * i * 0.08);
+      meterBars[i].style.transform = `scaleY(${(0.12 + h * 0.88).toFixed(3)})`;
+    }
+  };
 
   // ---- wordmark (bottom-left, ROOM 909 reads clearly) ----
   const mark = document.createElement('div');
@@ -86,10 +112,36 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   tickets.rel = 'noopener noreferrer';
   tickets.textContent = 'GET TICKETS';
 
+  // ---- top progress bar + section index ----
+  const progress = document.createElement('div');
+  progress.className = 'progress';
+  const pFill = document.createElement('i');
+  progress.appendChild(pFill);
+
+  const navIndex = document.createElement('div');
+  navIndex.className = 'nav-index';
+
+  // ---- motion toggle (accessibility) ----
+  const motion = document.createElement('button');
+  motion.type = 'button';
+  motion.className = 'motion-toggle';
+  let motionOff = false;
+  const reflectMotion = () => {
+    motion.innerHTML = `<span class="mi">${motionOff ? '▶' : '❚❚'}</span> Motion`;
+    motion.setAttribute('aria-pressed', String(motionOff));
+    motion.setAttribute('aria-label', motionOff ? 'Resume motion' : 'Pause motion');
+  };
+  motion.addEventListener('click', () => {
+    motionOff = !motionOff;
+    if (onToggleMotion) onToggleMotion(motionOff);
+    reflectMotion();
+  });
+  reflectMotion();
+
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, mark, prompt, tickets, popup.el);
+  root.append(nav, mark, prompt, tickets, progress, navIndex, motion, popup.el);
 
   // No intro gate: the music starts on the visitor's first real gesture
   // (click or key — the interactions browsers accept for audio unlock).
@@ -106,7 +158,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
   window.addEventListener('pointerdown', firstGesture);
   window.addEventListener('keydown', firstGesture);
 
-  // ---- react to state: highlight the active nav item ----
+  // ---- react to state: nav highlight + progress + index ----
   function syncState(state) {
     root.dataset.mode = director.isSection(state) ? 'section' : 'hero';
     sections.show(director.isSection(state) ? state : null);
@@ -114,6 +166,9 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
       b.classList.toggle('active', s === state);
       b.setAttribute('aria-current', s === state ? 'true' : 'false');
     }
+    const idx = Math.max(0, ORDER.indexOf(state));
+    pFill.style.width = `${(idx / (ORDER.length - 1)) * 100}%`;
+    navIndex.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(ORDER.length).padStart(2, '0')} · ${(LABELS[state] || 'Home').toUpperCase()}`;
   }
   director.onChange((state) => syncState(state));
   syncState(director.state);
@@ -123,7 +178,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio } = {}) {
     if (e.key === 'Escape' && director.isSection()) director.home();
   });
 
-  return { cells };
+  return { cells, setMeter };
 }
 
 function button(label, onClick) {

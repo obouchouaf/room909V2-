@@ -28,6 +28,7 @@ const CONTENT = {
       {
         name: 'FRAUSARP',
         time: '23:00 — 01:30',
+        tag: 'OPEN',
         initials: 'FR',
         photo: '/frausarp.jpg',
         bio: 'Opens the room. Patient, hypnotic builds that set the night in motion before the close.',
@@ -36,6 +37,7 @@ const CONTENT = {
       {
         name: 'HASHASHIN',
         time: '01:30 — SUNRISE',
+        tag: 'CLOSE',
         initials: 'HK',
         photo: '/hashashin.jpg',
         bio: 'Headline close. Hardware-driven, hypnotic techno held all the way to the lights coming up.',
@@ -313,7 +315,10 @@ function buildLineup(data) {
 
     const text = el('div', 'stage-text');
     text.appendChild(el('div', 'stage-name', a.name));
-    text.appendChild(el('div', 'stage-time', a.time));
+    const timeRow = el('div', 'stage-time');
+    timeRow.appendChild(el('span', null, a.time));
+    if (a.tag) timeRow.appendChild(el('span', 'set-tag', a.tag));
+    text.appendChild(timeRow);
     text.appendChild(el('p', 'stage-bio', a.bio));
     if (a.links.length) {
       const links = el('div', 'stage-links');
@@ -344,7 +349,10 @@ function buildLineup(data) {
     const li = el('li');
     const btn = el('button', 'lineup-name', artist.name);
     btn.type = 'button';
-    btn.appendChild(el('span', 'lineup-time', artist.time));
+    const row = el('span', 'lineup-time');
+    row.appendChild(el('span', null, artist.time));
+    if (artist.tag) row.appendChild(el('span', 'set-tag', artist.tag));
+    btn.appendChild(row);
     btn.addEventListener('mouseenter', () => setActive(i));
     btn.addEventListener('focus', () => setActive(i));
     btn.addEventListener('click', () => setActive(i));
