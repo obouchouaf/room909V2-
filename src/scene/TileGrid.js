@@ -102,14 +102,10 @@ const VERT = /* glsl */ `
     float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside
     vReveal = clamp(max(region * overCursor, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
-    // which tiles belong to the word — they will rise + flatten so the word
-    // reads, while the surrounding particles stay fluid and interactive.
+    // which tiles belong to the word — they rise + flatten so the word reads,
+    // while the surrounding particles stay fluid and interactive.
     float wordTile = texture2D(uMark, aCellUV).r * vReveal;
     float calm = 1.0 - wordTile;
-
-    // flatten only that centred box onto a clean plane so the word reads crisp;
-    // everywhere else keeps the full 3D interactivity.
-    float calm = 1.0 - vReveal;
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
