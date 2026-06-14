@@ -36,7 +36,8 @@ const VERT = /* glsl */ `
   uniform float uVelocity;     // smoothed pointer speed 0..1 (amplifies all)
   uniform float uBaseReveal;   // reveal floor for reduced motion
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
-  uniform vec2  uRevealHalf;   // half-size (world) of the centred reveal box
+  uniform vec2  uRevealHalf;   // half-size (world) of the centred reveal zone
+  uniform sampler2D uMark;     // the centred word mask (word tiles lift)
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -91,16 +92,20 @@ const VERT = /* glsl */ `
     float focus = spatial * uActive;
     vFocus = focus;
 
-    // ONE centred info at a time, confined to a box matching the text bounds.
-    // It only shows when the CURSOR is hovering over that box (not on any
-    // movement), and stays while the pointer rests there. The App cycles the
-    // word each time the cursor enters the box.
-    vec2 rn = abs(center.xy) / max(uRevealHalf, vec2(1e-3));
-    float box = 1.0 - smoothstep(0.85, 1.1, max(rn.x, rn.y)); // this tile in box
-    box = box * box * (3.0 - 2.0 * box);
-    vec2 prn = abs(uPointer.xy) / max(uRevealHalf, vec2(1e-3));
-    float overBox = 1.0 - smoothstep(0.8, 1.25, max(prn.x, prn.y)); // cursor in box
-    vReveal = clamp(max(box * overBox, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    // ONE centred word, revealed organically: a soft ELLIPSE (no hard box)
+    // centred on screen. It shows only when the cursor hovers inside it, and
+    // the word's own tiles RISE as bright particles out of the live mosaic.
+    vec2 rn = center.xy / max(uRevealHalf, vec2(1e-3));
+    float region = 1.0 - smoothstep(0.7, 1.18, length(rn));        // soft ellipse
+    region = region * region * (3.0 - 2.0 * region);
+    vec2 prn = uPointer.xy / max(uRevealHalf, vec2(1e-3));
+    float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside
+    vReveal = clamp(max(region * overCursor, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+
+    // which tiles belong to the word — they will rise + flatten so the word
+    // reads, while the surrounding particles stay fluid and interactive.
+    float wordTile = texture2D(uMark, aCellUV).r * vReveal;
+    float calm = 1.0 - wordTile;
 
     // flatten only that centred box onto a clean plane so the word reads crisp;
     // everywhere else keeps the full 3D interactivity.
@@ -178,9 +183,11 @@ const VERT = /* glsl */ `
     world.xy += dir * (focus * 0.2 + lensPull * 0.5) * amp;
     world.xy -= dir * lensPush * amp;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
-    // whole grid breathes forward on every detected kick — but not the flat
-    // scratch zone, so the revealed text stays crisp
+    // whole grid breathes forward on every detected kick — but not the word
+    // tiles, so the revealed text stays steady
     world.z += uKick * (0.18 + aSeed.x * 0.25) * calm;
+    // the word's tiles rise toward the camera — revealed by the particles
+    world.z += wordTile * 1.6;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -237,10 +244,11 @@ const FRAG = /* glsl */ `
     // surround dims hard and the text burns bright cream, so each band of
     // info reads clearly (MARRAKECH / 909 / LE CHARLESTON / coordinates).
     float mark = texture2D(uMark, vFullUV).r;
-    // gentle: softly darken the surround and a calm cream word that sits below
-    // the bloom threshold, so it reads clearly without glare
-    col = mix(col, col * 0.28, vReveal * (1.0 - mark));        // soft dark surround
-    col = mix(col, vec3(0.72, 0.69, 0.6), vReveal * mark);     // calm cream word
+    // organic: only a soft radial settling of the surround (no hard card) and
+    // the word's particles warm to a calm cream so they read as they rise
+    col = mix(col, col * 0.5, vReveal * (1.0 - mark));         // gentle soft dim
+    col = mix(col, vec3(0.76, 0.72, 0.6), vReveal * mark);     // warm cream word
+    col += uEmber * mark * vReveal * 0.16;                     // a touch of ember life
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -390,8 +398,8 @@ export class TileGrid {
     this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
     // tile size in texture UV, so the mask samples crisply across tiles
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
-    // the centred reveal box — a bit smaller, matches the word in the mask
-    this.uniforms.uRevealHalf.value.set(worldW * 0.26, worldH * 0.12);
+    // the centred reveal ellipse — sized to give the word room to read
+    this.uniforms.uRevealHalf.value.set(worldW * 0.3, worldH * 0.12);
     // redraw the centred word at the screen aspect (no stretch)
     this._mark.resize(worldW / worldH);
   }

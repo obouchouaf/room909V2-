@@ -202,17 +202,18 @@ export class App {
     // input
     this.pointer.tick(this.reduced ? 1 : Math.min(1, dt * 6));
 
-    // cycle the centred info each time the cursor ENTERS the centred box:
+    // cycle the centred info each time the cursor ENTERS the centred zone:
     // 909 → date → venue → city. Hover the spot to read; leave to hide.
     if (!still) {
       const half = this.grid.uniforms.uRevealHalf.value;
-      const inBox =
-        Math.abs(this.pointer.world.x) < half.x && Math.abs(this.pointer.world.y) < half.y;
-      if (inBox && !this._wasInBox) {
+      const ex = this.pointer.world.x / half.x;
+      const ey = this.pointer.world.y / half.y;
+      const inZone = ex * ex + ey * ey < 1.0;
+      if (inZone && !this._wasInBox) {
         this._wasInBox = true;
         this._infoIndex = (this._infoIndex + 1) % this._infos.length;
         this.grid.setMarkText(this._infos[this._infoIndex]);
-      } else if (!inBox) {
+      } else if (!inZone) {
         this._wasInBox = false;
       }
     }
