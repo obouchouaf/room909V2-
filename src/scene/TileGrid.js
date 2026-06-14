@@ -37,7 +37,6 @@ const VERT = /* glsl */ `
   uniform float uBaseReveal;   // reveal floor for reduced motion
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
   uniform vec2  uRevealHalf;   // half-size (world) of the centred reveal zone
-  uniform sampler2D uMark;     // the centred word mask (word tiles lift)
   uniform float uReduced;
 
   attribute vec2  aCellUV;     // center UV of this tile's texture region
@@ -102,10 +101,9 @@ const VERT = /* glsl */ `
     float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside
     vReveal = clamp(max(region * overCursor, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
-    // which tiles belong to the word — they rise + flatten so the word reads,
-    // while the surrounding particles stay fluid and interactive.
-    float wordTile = texture2D(uMark, aCellUV).r * vReveal;
-    float calm = 1.0 - wordTile;
+    // flatten the whole soft ellipse so the word sits coplanar — no depth
+    // parallax, no doubling. Particles outside the ellipse stay interactive.
+    float calm = 1.0 - vReveal;
 
     // faster movement amplifies everything — flicks feel kinetic
     float amp = 1.0 + uVelocity * 1.4;
@@ -179,11 +177,9 @@ const VERT = /* glsl */ `
     world.xy += dir * (focus * 0.2 + lensPull * 0.5) * amp;
     world.xy -= dir * lensPush * amp;
     world.z += zNoise + zPush + zFocus + zReact + ripple;
-    // whole grid breathes forward on every detected kick — but not the word
-    // tiles, so the revealed text stays steady
+    // whole grid breathes forward on every detected kick — but not the flat
+    // reveal zone, so the word stays steady
     world.z += uKick * (0.18 + aSeed.x * 0.25) * calm;
-    // the word's tiles rise toward the camera — revealed by the particles
-    world.z += wordTile * 1.6;
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -240,11 +236,10 @@ const FRAG = /* glsl */ `
     // surround dims hard and the text burns bright cream, so each band of
     // info reads clearly (MARRAKECH / 909 / LE CHARLESTON / coordinates).
     float mark = texture2D(uMark, vFullUV).r;
-    // organic: only a soft radial settling of the surround (no hard card) and
-    // the word's particles warm to a calm cream so they read as they rise
-    col = mix(col, col * 0.5, vReveal * (1.0 - mark));         // gentle soft dim
-    col = mix(col, vec3(0.76, 0.72, 0.6), vReveal * mark);     // warm cream word
-    col += uEmber * mark * vReveal * 0.16;                     // a touch of ember life
+    // organic: a soft settling of the surround + a calm cream word kept BELOW
+    // the bloom threshold, so it reads crisp with no glow/ghost halo
+    col = mix(col, col * 0.42, vReveal * (1.0 - mark));        // soft settle
+    col = mix(col, vec3(0.66, 0.63, 0.54), vReveal * mark);    // calm cream, no bloom
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
