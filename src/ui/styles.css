@@ -42,6 +42,128 @@ canvas#gl {
   touch-action: none;
 }
 
+/* ---- custom cursor (the ember focus reticle) ---- */
+.has-cursor,
+.has-cursor a,
+.has-cursor button {
+  cursor: none;
+}
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+  will-change: transform;
+}
+.cursor.show {
+  opacity: 1;
+}
+/* the scale wrapper carries the 128 BPM pulse (one beat ≈ 0.469s) */
+.cursor-scale {
+  position: absolute;
+  inset: 0;
+  animation: cursorBeat 0.469s ease-out infinite;
+}
+/* the ring carries the slow rotation */
+.cursor-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--ember);
+  border-radius: 6px;
+  animation: cursorSpin 9s linear infinite;
+  transition: border-radius 0.25s var(--ease), background 0.25s var(--ease);
+}
+@keyframes cursorSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes cursorBeat {
+  0% {
+    transform: scale(0.84);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.04);
+    opacity: 0.72;
+  }
+}
+.cursor-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--ember);
+  transform: translate(-50%, -50%);
+}
+.cursor-tick {
+  position: absolute;
+  background: var(--ember);
+}
+.cursor-tick.t,
+.cursor-tick.b {
+  left: 50%;
+  width: 1.5px;
+  height: 5px;
+  margin-left: -0.75px;
+}
+.cursor-tick.l,
+.cursor-tick.r {
+  top: 50%;
+  width: 5px;
+  height: 1.5px;
+  margin-top: -0.75px;
+}
+.cursor-tick.t {
+  top: -7px;
+}
+.cursor-tick.b {
+  bottom: -7px;
+}
+.cursor-tick.l {
+  left: -7px;
+}
+.cursor-tick.r {
+  right: -7px;
+}
+/* press: tighten. lock onto a target: grow + fill faintly, ring squares up */
+.cursor.down {
+  transform-origin: center;
+}
+.cursor.down .cursor-ring {
+  background: rgba(255, 92, 0, 0.25);
+}
+.cursor.lock {
+  width: 48px;
+  height: 48px;
+}
+.cursor.lock .cursor-ring {
+  border-radius: 2px;
+  background: rgba(255, 92, 0, 0.12);
+}
+.cursor.lock .cursor-scale {
+  animation-play-state: paused;
+}
+.cursor.lock .cursor-dot {
+  background: var(--cream);
+}
+@media (pointer: coarse) {
+  .cursor {
+    display: none;
+  }
+}
+
 /* ---- UI overlay layer ---- */
 .ui {
   position: fixed;
@@ -781,7 +903,9 @@ nav.bar {
   .mosaic i,
   .mosaic .init,
   .portrait,
-  .meta-row:first-child .meta-k::after {
+  .meta-row:first-child .meta-k::after,
+  .cursor-scale,
+  .cursor-ring {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

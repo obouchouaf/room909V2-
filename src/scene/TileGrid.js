@@ -238,9 +238,10 @@ const FRAG = /* glsl */ `
     // surround dims hard and the text burns bright cream, so each band of
     // info reads clearly (MARRAKECH / 909 / LE CHARLESTON / coordinates).
     float mark = texture2D(uMark, vFullUV).r;
-    col = mix(col, col * 0.08, vReveal * (1.0 - mark));        // darken surround hard
-    col = mix(col, vec3(1.0, 0.98, 0.92), vReveal * mark);     // near-white text
-    col += uEmber * mark * vReveal * 0.3;                      // ember rim
+    // strong contrast (dark surround) + a calm cream that reads clearly and
+    // does NOT blow out into bloom — legible while the rest stays live
+    col = mix(col, col * 0.12, vReveal * (1.0 - mark));        // dark surround
+    col = mix(col, vec3(0.82, 0.78, 0.68), vReveal * mark);    // readable cream
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
