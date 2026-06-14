@@ -91,14 +91,16 @@ const VERT = /* glsl */ `
     float focus = spatial * uActive;
     vFocus = focus;
 
-    // ONE centred info is revealed at a time, confined to a box that matches
-    // the text bounds — so the rest of the grid stays interactive tiles. The
-    // word itself is cycled by the App on each new scratch. Scratching (pointer
-    // activity) brings the box in; it fades when you stop.
+    // ONE centred info at a time, confined to a box matching the text bounds.
+    // It only shows when the CURSOR is hovering over that box (not on any
+    // movement), and stays while the pointer rests there. The App cycles the
+    // word each time the cursor enters the box.
     vec2 rn = abs(center.xy) / max(uRevealHalf, vec2(1e-3));
-    float box = 1.0 - smoothstep(0.82, 1.12, max(rn.x, rn.y));
+    float box = 1.0 - smoothstep(0.85, 1.1, max(rn.x, rn.y)); // this tile in box
     box = box * box * (3.0 - 2.0 * box);
-    vReveal = clamp(max(box * uActive, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    vec2 prn = abs(uPointer.xy) / max(uRevealHalf, vec2(1e-3));
+    float overBox = 1.0 - smoothstep(0.8, 1.25, max(prn.x, prn.y)); // cursor in box
+    vReveal = clamp(max(box * overBox, uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
 
     // flatten only that centred box onto a clean plane so the word reads crisp;
     // everywhere else keeps the full 3D interactivity.
@@ -235,10 +237,10 @@ const FRAG = /* glsl */ `
     // surround dims hard and the text burns bright cream, so each band of
     // info reads clearly (MARRAKECH / 909 / LE CHARLESTON / coordinates).
     float mark = texture2D(uMark, vFullUV).r;
-    // strong contrast (dark surround) + a calm cream that reads clearly and
-    // does NOT blow out into bloom — legible while the rest stays live
-    col = mix(col, col * 0.12, vReveal * (1.0 - mark));        // dark surround
-    col = mix(col, vec3(0.82, 0.78, 0.68), vReveal * mark);    // readable cream
+    // gentle: softly darken the surround and a calm cream word that sits below
+    // the bloom threshold, so it reads clearly without glare
+    col = mix(col, col * 0.28, vReveal * (1.0 - mark));        // soft dark surround
+    col = mix(col, vec3(0.72, 0.69, 0.6), vReveal * mark);     // calm cream word
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -388,8 +390,8 @@ export class TileGrid {
     this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
     // tile size in texture UV, so the mask samples crisply across tiles
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
-    // the centred reveal box — matches the word size drawn in the mask
-    this.uniforms.uRevealHalf.value.set(worldW * 0.34, worldH * 0.15);
+    // the centred reveal box — a bit smaller, matches the word in the mask
+    this.uniforms.uRevealHalf.value.set(worldW * 0.26, worldH * 0.12);
     // redraw the centred word at the screen aspect (no stretch)
     this._mark.resize(worldW / worldH);
   }
@@ -448,14 +450,14 @@ function makeMark() {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     g.lineJoin = 'round';
-    // fit the single word to the centred reveal box: ~62% width, ~26% height
-    let size = Math.min(0.26 * c.height, 0.5 * c.width);
+    // fit the single word to the (smaller) centred reveal box
+    let size = Math.min(0.2 * c.height, 0.42 * c.width);
     g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
-    while (g.measureText(current).width > c.width * 0.62 && size > 8) {
+    while (g.measureText(current).width > c.width * 0.5 && size > 8) {
       size -= 4;
       g.font = `${size}px "Share Tech Mono", ui-monospace, monospace`;
     }
-    g.lineWidth = Math.max(2, size * 0.09);
+    g.lineWidth = Math.max(2, size * 0.07);
     g.strokeText(current, c.width / 2, c.height / 2);
     g.fillText(current, c.width / 2, c.height / 2);
     tex.needsUpdate = true;

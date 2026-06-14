@@ -105,10 +105,11 @@ export class App {
     this.setMeter = setMeter;
     this.cursorPulse = null; // wired from main.js
 
-    // the centred info reveal cycles through these on each new scratch
+    // the centred info reveal cycles through these each time the cursor
+    // enters the centred box (hover the spot to read it)
     this._infos = ['909', '12 SEP 2026', 'LE CHARLESTON', 'MARRAKECH'];
-    this._infoIndex = -1; // first scratch lands on 909
-    this._wasScratching = false;
+    this._infoIndex = -1; // first hover lands on 909
+    this._wasInBox = false;
 
     // sequencer DOM follows the same clock
     this._litCell = 0;
@@ -201,14 +202,18 @@ export class App {
     // input
     this.pointer.tick(this.reduced ? 1 : Math.min(1, dt * 6));
 
-    // cycle the centred info on each fresh scratch: 909 → date → venue → city
+    // cycle the centred info each time the cursor ENTERS the centred box:
+    // 909 → date → venue → city. Hover the spot to read; leave to hide.
     if (!still) {
-      if (this.pointer.strength > 0.55 && !this._wasScratching) {
-        this._wasScratching = true;
+      const half = this.grid.uniforms.uRevealHalf.value;
+      const inBox =
+        Math.abs(this.pointer.world.x) < half.x && Math.abs(this.pointer.world.y) < half.y;
+      if (inBox && !this._wasInBox) {
+        this._wasInBox = true;
         this._infoIndex = (this._infoIndex + 1) % this._infos.length;
         this.grid.setMarkText(this._infos[this._infoIndex]);
-      } else if (this.pointer.strength < 0.12) {
-        this._wasScratching = false;
+      } else if (!inBox) {
+        this._wasInBox = false;
       }
     }
 
