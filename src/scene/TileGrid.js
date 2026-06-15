@@ -84,7 +84,6 @@ const VERT = /* glsl */ `
     float dist  = distance(center.xy, uPointer.xy);
     float spatial = 1.0 - smoothstep(0.0, uFocusRadius * gain, dist); // 1 near cursor
     spatial = spatial * spatial * (3.0 - 2.0 * spatial);      // ease it
-    spatial = pow(spatial, 1.4);                              // tighten the core so the resolve snaps
     spatial = clamp(spatial * flick, 0.0, 1.0);
     spatial *= (1.0 - uTransition);                           // no focus mid-section
 
@@ -256,15 +255,12 @@ const FRAG = /* glsl */ `
     // (no opacity on tiles — the word's gap is opened by physically pushing
     // the tiles aside, not by fading them)
 
-    // sequencer emissive flash — this is what bloom catches. The active
-    // column punches harder on the beat, with a cream tip so the bloom pass
-    // blooms the downbeat and the rhythm reads visually, not just audibly.
-    col += uEmber * vPulse * 0.9;
-    col += vec3(1.0) * vPulse * 0.14;
+    // sequencer emissive flash — this is what bloom catches
+    col += uEmber * vPulse * 0.6;
     // music-reactive tiles glow softly on the kick
-    col += uEmber * vReact * 0.3;
+    col += uEmber * vReact * 0.28;
     // and the whole grid lifts a touch on the kick (synced to the music)
-    col *= 1.0 + uKick * 0.07;
+    col *= 1.0 + uKick * 0.06;
 
     // very faint tile seams — present but not a hard grid. Suppressed inside
     // the reveal so the text isn't broken up by dark gaps.
@@ -272,10 +268,10 @@ const FRAG = /* glsl */ `
     float frame = min(e.x, e.y);
     col *= mix(1.0, mix(0.9, 0.97, vFocus), (1.0 - frame) * (1.0 - vReveal));
 
-    // atmospheric depth: tiles pushed back (the scattered cloud, or any tile
-    // sunk on the kick) fade toward charcoal, so the grid reads as a deep
-    // space rather than a flat plane — and the cloud behind a section recedes.
-    float fog = clamp(-vDepth * 0.045, 0.0, 0.62);
+    // atmospheric depth for sections only (gated by uTransition so the hero
+    // is untouched): the receding cloud fades toward charcoal, reading as a
+    // deep space behind the section text rather than a flat plane.
+    float fog = clamp(-vDepth * 0.045, 0.0, 0.62) * uTransition;
     col = mix(col, vec3(0.05, 0.045, 0.04), fog);
 
     // dim the scattered cloud so section text stays readable over it
@@ -398,9 +394,8 @@ export class TileGrid {
     this._cellUV.needsUpdate = true;
     this._column.needsUpdate = true;
 
-    // focus radius scales with the world so the resolve feels consistent —
-    // kept tight so the cursor's resolve spot is a punchy, well-bounded core
-    this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.36;
+    // focus radius scales with the world so the resolve feels consistent
+    this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
     // tile size in texture UV, so the mask samples crisply across tiles
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
     // the centred reveal ellipse — where the DOM info text appears on hover.

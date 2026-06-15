@@ -61,28 +61,22 @@ export function initCursor() {
 
   const scale = el.querySelector('.cursor-scale');
   let kick = 0;
-  let down = 0; // downbeat thunk 1 -> 0
 
   const loop = (now) => {
     cx += (tx - cx) * 0.28;
     cy += (ty - cy) * 0.28;
     el.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
-    // gentle idle breathing + a punch on each detected kick, with a bigger
-    // "thunk" on the downbeat (driven by the App) so the knob rides the bar
+    // gentle idle breathing + a punch on each detected kick (driven by the App)
     const idle = 0.95 + 0.04 * Math.sin(now * 0.004);
-    scale.style.transform = `scale(${(idle + kick * 0.22 + down * 0.34).toFixed(3)})`;
-    el.classList.toggle('beat', down > 0.5);
-    down *= 0.86;
+    scale.style.transform = `scale(${(idle + kick * 0.24).toFixed(3)})`;
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
 
-  // the App feeds the real detected kick + downbeat here so the knob pulses
-  // on the beat and thunks on the bar
+  // the App feeds the real detected kick here so the knob pulses on the beat
   return {
-    pulse: (k, d) => {
+    pulse: (k) => {
       kick = k || 0;
-      if (d) down = 1;
     }
   };
 }

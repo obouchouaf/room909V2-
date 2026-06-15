@@ -60,25 +60,11 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
     sDot.classList.toggle('off', muted);
     sound.setAttribute('aria-pressed', String(!muted));
   };
-  // sound is an explicit choice: the first click on the invitation (or this
-  // toggle) starts playback; after that the toggle mutes/unmutes.
-  let audioStarted = false;
-  function startAudio() {
-    if (audioStarted) return;
-    audioStarted = true;
-    if (onEnter) onEnter();
-    if (soundInvite) soundInvite.classList.add('gone');
-    if (audio) reflectSound(audio.muted);
-  }
   sound.addEventListener('click', () => {
     if (!audio) return;
-    if (!audioStarted) {
-      startAudio();
-      return;
-    }
     reflectSound(audio.toggleMute());
   });
-  reflectSound(true); // reads as "sound off" until the visitor opts in
+  reflectSound(audio ? audio.muted : false);
   nav.appendChild(sound);
 
   /** called each frame by the App with the live audio level + kick. */
@@ -127,21 +113,6 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   revealHint.className = 'reveal-hint';
   revealHint.setAttribute('aria-hidden', 'true');
   const setReveal = makeReveal(reveal, revealHint);
-
-  // ---- sound invitation — the experience is beat-synced, so invite the
-  // visitor to turn it on rather than starting audio silently on any click ----
-  const soundInvite = document.createElement('button');
-  soundInvite.type = 'button';
-  soundInvite.className = 'sound-invite';
-  soundInvite.innerHTML = '<span class="si-ico">▶</span> Play with sound';
-  soundInvite.addEventListener('click', startAudio);
-
-  // ---- hero swipe/scroll cue — signals that sections live above/below ----
-  const heroCue = document.createElement('div');
-  heroCue.className = 'hero-cue';
-  heroCue.setAttribute('aria-hidden', 'true');
-  heroCue.innerHTML =
-    '<span class="hc-label">Explore</span><span class="hc-arrows"><i></i><i></i><i></i></span>';
 
   // ---- get tickets — the single boldest CTA ----
   const TICKETS_URL = 'https://shotgun.live/'; // TODO: real ticket link
@@ -195,13 +166,12 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   scrollFade.setAttribute('aria-hidden', 'true');
 
   root.append(
-    nav, mark, prompt, revealHint, reveal, soundInvite, heroCue, tickets, ticketSticky,
+    nav, mark, prompt, revealHint, reveal, tickets, ticketSticky,
     scrollFade, progress, navIndex, motion, popup.el
   );
 
-  // No intro gate. The first gesture only primes gyro parallax; audio is an
-  // explicit opt-in via the "Play with sound" invitation (or the Sound
-  // toggle), never started silently on a stray click.
+  // No intro gate: the music starts on the visitor's first real gesture
+  // (click or key — the interactions browsers accept for audio unlock).
   let entered = false;
   const firstGesture = () => {
     if (entered) return;
@@ -209,6 +179,8 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
     window.removeEventListener('pointerdown', firstGesture);
     window.removeEventListener('keydown', firstGesture);
     if (onGyro) onGyro();
+    if (onEnter) onEnter();
+    if (audio) reflectSound(audio.muted);
   };
   window.addEventListener('pointerdown', firstGesture);
   window.addEventListener('keydown', firstGesture);
@@ -217,8 +189,6 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   function syncState(state) {
     root.dataset.mode = director.isSection(state) ? 'section' : 'hero';
     sections.show(director.isSection(state) ? state : null);
-    // once they've navigated once, the swipe cue has done its job
-    if (director.isSection(state)) heroCue.classList.add('gone');
     for (const [s, b] of navButtons) {
       b.classList.toggle('active', s === state);
       b.setAttribute('aria-current', s === state ? 'true' : 'false');
@@ -258,14 +228,6 @@ function makeReveal(el, hint) {
   maskC.width = W;
   maskC.height = H;
   const mctx = maskC.getContext('2d');
-
-  // the word is given material — lit cream at the top falling to ember/rust at
-  // the foot, as if it glows up out of the mosaic rather than a flat label
-  const wordGrad = ctx.createLinearGradient(0, H * 0.16, 0, H * 0.9);
-  wordGrad.addColorStop(0.0, '#f3eede');
-  wordGrad.addColorStop(0.5, '#ffb070');
-  wordGrad.addColorStop(0.8, '#ff5c00');
-  wordGrad.addColorStop(1.0, '#9a3506');
 
   let word = '808';
   let display = '808';
@@ -344,17 +306,11 @@ function makeReveal(el, hint) {
 
     // draw the word, then keep only the scratched-open area
     ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#efe9dc';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     setFont(display);
-    const y = H / 2 + 6;
-    // a dark edge so the lit word stays legible over the brightest tiles
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(3, H * 0.03);
-    ctx.strokeStyle = 'rgba(20,18,16,0.55)';
-    ctx.strokeText(display, W / 2, y);
-    ctx.fillStyle = wordGrad;
-    ctx.fillText(display, W / 2, y);
+    ctx.fillText(display, W / 2, H / 2 + 6);
     ctx.globalCompositeOperation = 'destination-in';
     ctx.drawImage(maskC, 0, 0);
     ctx.globalCompositeOperation = 'source-over';

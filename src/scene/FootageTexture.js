@@ -58,30 +58,20 @@ const FRAG = /* glsl */ `
     float n  = fbm(p * 2.2 + vec2(drift, -drift * 0.7) + fbm(p * 3.0 - drift) * 0.6);
     float n2 = fbm(p * 5.0 + vec2(-drift * 0.5, drift * 0.3));
 
-    // big, slow low-frequency structure: pools of light in a mostly dark
-    // room. This is what keeps the field from reading as a flat orange wall —
-    // ember concentrates where the light pools, charcoal owns the rest.
-    float room  = fbm(p * 0.85 + vec2(drift * 0.4, 7.0));
-    float light = smoothstep(0.40, 0.82, room);
-
     // locked palette only
-    vec3 charcoal = vec3(0.045, 0.04, 0.036);
+    vec3 charcoal = vec3(0.055, 0.05, 0.045);
     vec3 rust     = vec3(0.45, 0.13, 0.012);   // #732103-ish
     vec3 ember    = vec3(1.0, 0.36, 0.0);      // #FF5C00
     vec3 cream    = vec3(0.937, 0.913, 0.863); // #EFE9DC
 
-    // start in deep charcoal; let rust/ember/cream emerge ONLY inside the
-    // light pools, so large negative-space pockets stay dark and the mosaic
-    // resolves into an image with real contrast instead of uniform noise.
-    vec3 col = charcoal;
-    col = mix(col, rust,  smoothstep(0.40, 0.70, n) * (0.30 + 0.70 * light));
-    col = mix(col, ember, smoothstep(0.70, 0.92, n) * light);
-    col = mix(col, cream, smoothstep(0.88, 0.99, n * n2 * 1.7) * light);
+    vec3 col = mix(charcoal, rust, smoothstep(0.30, 0.62, n));
+    col = mix(col, ember, smoothstep(0.58, 0.85, n) * 0.9);
+    col = mix(col, cream, smoothstep(0.80, 0.97, n * n2 * 1.6));
 
-    // haze beams raking the room — only where the light reaches
+    // haze beams raking the room
     float beam = smoothstep(0.6, 1.0, sin(p.x * 3.0 + t * 0.05) * 0.5 + 0.5)
                * smoothstep(1.2, 0.2, p.y + 1.0);
-    col += cream * beam * 0.05 * light;
+    col += cream * beam * 0.04;
 
     gl_FragColor = vec4(col, 1.0);
   }
