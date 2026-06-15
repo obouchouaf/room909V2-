@@ -294,6 +294,15 @@ function buildLineup(data) {
     const a = data.lineup[i];
     stage.innerHTML = '';
 
+    // big active-artist heading first (name + time + role)
+    const head = el('div', 'stage-head');
+    head.appendChild(el('div', 'stage-name', a.name));
+    const timeRow = el('div', 'stage-time');
+    timeRow.appendChild(el('span', null, a.time));
+    if (a.tag) timeRow.appendChild(el('span', 'set-tag', a.tag));
+    head.appendChild(timeRow);
+    stage.appendChild(head);
+
     // portrait + side arrows in one relative block, so the arrows sit on
     // the edges of the image and never overlap the text or the nav bar
     const visual = el('div', 'stage-visual');
@@ -312,12 +321,8 @@ function buildLineup(data) {
     );
     stage.appendChild(visual);
 
+    // bio + links below
     const text = el('div', 'stage-text');
-    text.appendChild(el('div', 'stage-name', a.name));
-    const timeRow = el('div', 'stage-time');
-    timeRow.appendChild(el('span', null, a.time));
-    if (a.tag) timeRow.appendChild(el('span', 'set-tag', a.tag));
-    text.appendChild(timeRow);
     text.appendChild(el('p', 'stage-bio', a.bio));
     if (a.links.length) {
       const links = el('div', 'stage-links');

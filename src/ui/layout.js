@@ -80,7 +80,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   const mark = document.createElement('div');
   mark.className = 'mark';
   mark.innerHTML =
-    '<b>ROOM <span class="nine">808</span></b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span>';
+    '<b>ROOM <span class="logo808">8<span class="o"></span>8</span></b><span class="sub">MARRAKECH · 31.62°N 7.99°W</span>';
   const rc = button('Rhythm Composer', () => popup.open());
   rc.className = 'rc-link';
   mark.appendChild(rc);
@@ -114,13 +114,22 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   revealHint.setAttribute('aria-hidden', 'true');
   const setReveal = makeReveal(reveal, revealHint);
 
-  // ---- get tickets — visible on the front page ----
+  // ---- get tickets — the single boldest CTA ----
+  const TICKETS_URL = 'https://shotgun.live/'; // TODO: real ticket link
   const tickets = document.createElement('a');
   tickets.className = 'tickets';
-  tickets.href = 'https://shotgun.live/'; // TODO: real ticket link
+  tickets.href = TICKETS_URL;
   tickets.target = '_blank';
   tickets.rel = 'noopener noreferrer';
   tickets.textContent = 'GET TICKETS';
+
+  // sticky tickets button — stays reachable inside sections (top-right)
+  const ticketSticky = document.createElement('a');
+  ticketSticky.className = 'ticket-sticky';
+  ticketSticky.href = TICKETS_URL;
+  ticketSticky.target = '_blank';
+  ticketSticky.rel = 'noopener noreferrer';
+  ticketSticky.innerHTML = 'Tickets <span class="arr">↗</span>';
 
   // ---- top progress bar + section index ----
   const progress = document.createElement('div');
@@ -151,7 +160,15 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   // ---- sections ----
   const sections = buildSections(root);
 
-  root.append(nav, mark, prompt, revealHint, reveal, tickets, progress, navIndex, motion, popup.el);
+  // ---- scroll cue — a bottom fade in sections that signals more below ----
+  const scrollFade = document.createElement('div');
+  scrollFade.className = 'scroll-fade';
+  scrollFade.setAttribute('aria-hidden', 'true');
+
+  root.append(
+    nav, mark, prompt, revealHint, reveal, tickets, ticketSticky,
+    scrollFade, progress, navIndex, motion, popup.el
+  );
 
   // No intro gate: the music starts on the visitor's first real gesture
   // (click or key — the interactions browsers accept for audio unlock).

@@ -370,6 +370,21 @@ nav.bar {
 .mark b .nine {
   color: var(--ember);
 }
+/* 808 logotype — the middle 0 becomes a knob/step ring */
+.logo808 {
+  color: var(--ember);
+  display: inline-flex;
+  align-items: center;
+}
+.logo808 .o {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin: 0 0.06em;
+  border: 0.13em solid var(--ember);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 92, 0, 0.5);
+}
 .mark .sub {
   font-size: 10px;
   letter-spacing: 0.22em;
@@ -652,36 +667,87 @@ nav.bar {
   pointer-events: none;
 }
 
-/* ---- GET TICKETS — front and center, above the nav bar ---- */
+/* ---- GET TICKETS — the single boldest CTA: solid ember ---- */
 .tickets {
   position: fixed;
   left: 50%;
   bottom: 84px;
   transform: translateX(-50%);
-  padding: 13px 32px;
+  padding: 15px 36px;
   border: 1px solid var(--ember);
   border-radius: 999px;
-  background: rgba(20, 18, 16, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--ember);
-  font-size: 11px;
-  letter-spacing: 0.28em;
+  background: var(--ember);
+  color: var(--charcoal);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
   text-decoration: none;
-  transition: background 0.25s var(--ease), color 0.25s var(--ease),
-    box-shadow 0.25s var(--ease), opacity 0.4s var(--ease);
+  box-shadow: 0 0 30px rgba(255, 92, 0, 0.45);
+  transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease),
+    opacity 0.4s var(--ease);
 }
 .tickets:hover,
 .tickets:focus-visible {
-  background: var(--ember);
-  color: var(--charcoal);
-  box-shadow: 0 0 28px rgba(255, 92, 0, 0.55);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 0 40px rgba(255, 92, 0, 0.7);
 }
 /* sections have their own CTA — keep the hero clean of duplicates */
 .ui[data-mode='section'] .tickets {
   opacity: 0;
   pointer-events: none;
+}
+
+/* sticky tickets — reachable inside any section (top-right) */
+.ticket-sticky {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 25;
+  display: none;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--ember);
+  color: var(--charcoal);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  box-shadow: 0 0 22px rgba(255, 92, 0, 0.4);
+  transition: transform 0.2s var(--ease);
+}
+.ticket-sticky .arr {
+  font-weight: 400;
+}
+.ticket-sticky:hover {
+  transform: translateY(-1px);
+}
+.ui[data-mode='section'] .ticket-sticky {
+  display: inline-flex;
+}
+/* the section index shifts left when the sticky ticket is showing */
+.ui[data-mode='section'] .nav-index {
+  right: 150px;
+}
+
+/* ---- scroll cue — bottom fade in sections (signals more below) ---- */
+.scroll-fade {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 120px;
+  z-index: 12;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(to top, var(--charcoal) 8%, transparent);
+  transition: opacity 0.4s var(--ease);
+}
+.ui[data-mode='section'] .scroll-fade {
+  opacity: 0.9;
 }
 
 /* in a section, fade the hero identity (wordmark + sequencer) so the
@@ -744,15 +810,17 @@ nav.bar {
 .lineup-stage {
   position: relative;
 }
+.stage-head {
+  margin-bottom: 18px;
+}
 .stage-name {
   font-family: var(--display);
   font-weight: 800;
-  font-size: clamp(28px, 4.2vw, 54px);
-  letter-spacing: 0.02em;
-  line-height: 0.95;
+  font-size: clamp(34px, 5vw, 66px);
+  letter-spacing: 0.01em;
+  line-height: 0.92;
   text-transform: uppercase;
   color: var(--cream);
-  margin-top: 14px;
 }
 .stage-time {
   font-size: 10px;
@@ -832,11 +900,11 @@ nav.bar {
   color: var(--cream);
 }
 
-/* real photo portrait — toned into the brand palette, large */
+/* real photo portrait — toned into the brand palette, contained */
 .portrait {
   position: relative;
   width: 100%;
-  max-width: 560px;
+  max-width: 380px;
   background: var(--charcoal);
   overflow: hidden;
   opacity: 0;
