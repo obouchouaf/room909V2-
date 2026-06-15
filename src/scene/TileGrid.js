@@ -102,14 +102,14 @@ const VERT = /* glsl */ `
     float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside box
     float inBox = region * overCursor * (1.0 - uTransition);
 
-    // proximity of this tile to the cursor (the local "scratch")
+    // the cursor's MAGNETIC FIELD: a circle around the pointer where the tiles
+    // are cleared and the word underneath shows through
     float dcur = distance(center.xy, uPointer.xy);
-    float near = 1.0 - smoothstep(0.0, uFocusRadius * 0.85, dcur);
-    near = near * near;
+    float field = 1.0 - smoothstep(0.0, uFocusRadius * 0.62, dcur);
+    field = field * field;
 
-    // light dim across the box, strong dim right under the cursor
-    vReveal = clamp(inBox * (0.4 + 0.6 * near) + uBaseReveal * (1.0 - uTransition), 0.0, 1.0);
-    float part = inBox * near;     // how much this tile parts away
+    vReveal = clamp(inBox * field + uBaseReveal * (1.0 - uTransition), 0.0, 1.0);
+    float part = inBox * field;    // how much this tile is pushed out of the field
     float calm = 1.0 - vReveal;
 
     // faster movement amplifies everything — flicks feel kinetic
@@ -188,12 +188,13 @@ const VERT = /* glsl */ `
     // reveal zone, so the word stays steady
     world.z += uKick * (0.18 + aSeed.x * 0.25) * calm;
 
-    // tiles part away from the cursor to clear space for the word beneath
+    // the magnetic field repels the tiles out of its circle, opening a clear
+    // gap for the word beneath
     vec2 awayDir = center.xy - uPointer.xy;
     float al = length(awayDir);
     awayDir = al > 1e-4 ? awayDir / al : vec2(0.0);
-    world.xy += awayDir * part * 1.5;     // slide aside
-    world.z -= part * 0.9;                 // and sink back, opening a gap
+    world.xy += awayDir * part * 2.7;     // pushed aside
+    world.z -= part * 1.3;                 // and sunk back, opening a gap
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;

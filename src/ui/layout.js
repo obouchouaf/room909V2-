@@ -209,9 +209,10 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
 }
 
 /**
- * The centred reveal text: crisp Share Tech Mono that resolves character by
- * character (a brief scramble) when a new word comes in, then fades out when
- * the cursor leaves the centre. Returns setReveal(text, show).
+ * The centred reveal text. The word lives UNDER the tiles: it is masked to a
+ * circular window that tracks the REAL cursor, so it's only visible where the
+ * cursor's "magnetic field" has cleared the tiles — it reads as emerging from
+ * beneath the mosaic. Returns setReveal(text, show).
  */
 function makeReveal(el, hint) {
   const GLYPHS = '0123456789ABCDEFGHJKLMNPRSTUWXYZ#%·';
@@ -222,6 +223,18 @@ function makeReveal(el, hint) {
   let cur = '';
   let raf = 0;
   let discovered = false;
+
+  // the mask circle follows the cursor in the text element's own coordinates
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      if (!shown || e.pointerType === 'touch') return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--cx', `${(e.clientX - r.left).toFixed(0)}px`);
+      el.style.setProperty('--cy', `${(e.clientY - r.top).toFixed(0)}px`);
+    },
+    { passive: true }
+  );
 
   const scrambleTo = (target) => {
     cancelAnimationFrame(raf);
@@ -248,11 +261,8 @@ function makeReveal(el, hint) {
     raf = requestAnimationFrame(step);
   };
 
-  return (text, show, mx = 0.5, prog = 0) => {
+  return (text, show) => {
     if (show) {
-      el.style.setProperty('--mx', `${(mx * 100).toFixed(1)}%`);
-      // the cleared window grows the longer you hover (10% → 64% half-width)
-      el.style.setProperty('--rw', `${(10 + prog * 54).toFixed(1)}%`);
       if (!discovered && hint) {
         discovered = true;
         hint.classList.add('gone');
