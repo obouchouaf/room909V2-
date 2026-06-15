@@ -239,13 +239,18 @@ function makeReveal(el, hint) {
   let cy = -999;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  const trackPoint = (clientX, clientY) => {
+    const r = view.getBoundingClientRect();
+    cx = ((clientX - r.left) / r.width) * W;
+    cy = ((clientY - r.top) / r.height) * H;
+  };
+  // mouse + finger both drive the scratch lead, so the reveal follows a
+  // dragged finger on touch the same way it follows the cursor on desktop
+  window.addEventListener('pointermove', (e) => trackPoint(e.clientX, e.clientY), { passive: true });
   window.addEventListener(
-    'pointermove',
+    'touchmove',
     (e) => {
-      if (e.pointerType === 'touch') return;
-      const r = view.getBoundingClientRect();
-      cx = ((e.clientX - r.left) / r.width) * W;
-      cy = ((e.clientY - r.top) / r.height) * H;
+      if (e.touches[0]) trackPoint(e.touches[0].clientX, e.touches[0].clientY);
     },
     { passive: true }
   );

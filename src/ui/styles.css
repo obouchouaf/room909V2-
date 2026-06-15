@@ -587,8 +587,8 @@ nav.bar {
 }
 .reveal-text canvas {
   display: block;
-  height: clamp(74px, 12vh, 132px);
-  width: auto;
+  width: min(760px, 90vw);
+  height: auto;
 }
 .reveal-text.show {
   opacity: 1;
@@ -1131,6 +1131,10 @@ nav.bar {
     top: 32px;
     right: 12px;
     padding: 5px 9px;
+  }
+  /* keep the scratched word inside the screen, never overflowing the sides */
+  .reveal-text canvas {
+    width: 88vw;
   }
   .prompt {
     top: 56px;

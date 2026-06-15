@@ -391,8 +391,14 @@ export class TileGrid {
     this.uniforms.uFocusRadius.value = Math.min(worldW, worldH) * 0.4;
     // tile size in texture UV, so the mask samples crisply across tiles
     this.uniforms.uCellSize.value.set(1 / cols, 1 / rows);
-    // the centred reveal ellipse — where the DOM info text appears on hover
-    this.uniforms.uRevealHalf.value.set(worldW * 0.3, worldH * 0.12);
+    // the centred reveal ellipse — where the DOM info text appears on hover.
+    // On portrait/narrow screens the word spans most of the width, so widen
+    // the cleared zone to match (otherwise the tiles part in a patch that's
+    // narrower than the text sitting on top of them).
+    const portrait = worldH > worldW;
+    const hx = portrait ? 0.46 : 0.3;
+    const hy = portrait ? 0.1 : 0.12;
+    this.uniforms.uRevealHalf.value.set(worldW * hx, worldH * hy);
   }
 
   // no-op kept so the (disabled) attract path stays harmless
