@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
 <defs>
-<style>@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;800;900&amp;family=Space+Mono:wght@400;700&amp;display=swap');</style>
+<style>@import url('https://fonts.googleapis.com/css2?family=Martian+Mono:wght@500;700;800&amp;family=Space+Mono:wght@400;700&amp;display=swap');</style>
 <radialGradient id="vig" cx="50%" cy="42%" r="75%">
 <stop offset="55%" stop-color="#141210" stop-opacity="0"/>
 <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>

@@ -1,9 +1,9 @@
 /**
- * ROOM 909 — social identity template generator.
+ * ROOM 808 — social identity template generator.
  *
  * Builds SVG templates straight from the website's visual language: the
- * charcoal field, the ember 909, the tile mosaic, the 16-step sequencer,
- * wide-tracked Share Tech Mono, the coordinates. Pure string building, no
+ * charcoal field, the ember 808, the tile mosaic, the 16-step sequencer,
+ * Martian Mono + Space Mono, the coordinates. Pure string building, no
  * dependencies. SVGs export to PNG with any tool (or open in a browser and
  * screenshot at 2x). Edit the CONTENT block and re-run:  node generate.mjs
  */
@@ -26,7 +26,7 @@ const C = {
   line: 'rgba(239,233,220,0.22)'
 };
 const FONT = `'Space Mono', ui-monospace, monospace`; // labels / body
-const DISPLAY = `'Archivo', 'Space Mono', sans-serif`; // big headlines
+const DISPLAY = `'Martian Mono', 'Space Mono', monospace`; // big headlines
 
 // editable content — change these, re-run
 const CONTENT = {
@@ -108,7 +108,7 @@ function text(x, y, s, { size = 24, color = C.cream, ls = 6, anchor = 'start', w
 function svg(w, h, body) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
 <defs>
-<style>@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;800;900&amp;family=Space+Mono:wght@400;700&amp;display=swap');</style>
+<style>@import url('https://fonts.googleapis.com/css2?family=Martian+Mono:wght@500;700;800&amp;family=Space+Mono:wght@400;700&amp;display=swap');</style>
 <radialGradient id="vig" cx="50%" cy="42%" r="75%">
 <stop offset="55%" stop-color="${C.charcoal}" stop-opacity="0"/>
 <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>
@@ -127,7 +127,7 @@ ${body}
 // big 808 watermark with a soft ember glow
 function bigNine(x, y, size, opacity = 1) {
   return `<g opacity="${opacity}">
-<text x="${x}" y="${y}" font-family="${DISPLAY}" font-weight="900" font-size="${size}" letter-spacing="${size * 0.01}" fill="${C.ember}" text-anchor="middle" style="text-transform:uppercase">808</text></g>`;
+<text x="${x}" y="${y}" font-family="${DISPLAY}" font-weight="800" font-size="${size}" letter-spacing="${size * 0.01}" fill="${C.ember}" text-anchor="middle" style="text-transform:uppercase">808</text></g>`;
 }
 
 // ---- templates -------------------------------------------------------

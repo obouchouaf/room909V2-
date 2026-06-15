@@ -1,6 +1,6 @@
 /* ROOM 808 — brand stylesheet.
    Palette is locked: charcoal, cream, ember, rust. Nothing else.
-   Type: Archivo (heavy grotesque) for display, Space Mono for labels/body —
+   Type: Martian Mono (heavy technical) for display, Space Mono for labels/body —
    small, uppercase, wide tracking on the mono. */
 
 :root {
@@ -13,7 +13,7 @@
   --glass: rgba(20, 18, 16, 0.42);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --mono: 'Space Mono', ui-monospace, monospace;
-  --display: 'Archivo', 'Space Mono', system-ui, sans-serif;
+  --display: 'Martian Mono', 'Space Mono', ui-monospace, monospace;
 }
 
 * {
@@ -59,7 +59,7 @@ canvas#gl {
 }
 #boot span {
   font-family: var(--display);
-  font-weight: 900;
+  font-weight: 800;
   font-size: 30px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -69,7 +69,7 @@ canvas#gl {
 }
 #boot b {
   color: var(--ember);
-  font-weight: 900;
+  font-weight: 800;
 }
 @keyframes bootFade {
   to {
@@ -360,7 +360,7 @@ nav.bar {
 .mark b {
   font-family: var(--display);
   color: var(--cream);
-  font-weight: 900;
+  font-weight: 800;
   font-size: 30px;
   letter-spacing: 0.04em;
   line-height: 1;
@@ -434,9 +434,9 @@ nav.bar {
 }
 .section h1 {
   font-family: var(--display);
-  font-weight: 900;
+  font-weight: 800;
   font-size: clamp(40px, 7vw, 92px);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   line-height: 0.92;
   color: var(--cream);
@@ -558,7 +558,7 @@ nav.bar {
   z-index: 15;
   pointer-events: none;
   font-family: var(--display);
-  font-weight: 900;
+  font-weight: 800;
   font-size: clamp(36px, 6.5vw, 84px);
   letter-spacing: 0.01em;
   text-transform: uppercase;
@@ -738,9 +738,9 @@ nav.bar {
 }
 .stage-name {
   font-family: var(--display);
-  font-weight: 900;
+  font-weight: 800;
   font-size: clamp(28px, 4.2vw, 54px);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em;
   line-height: 0.95;
   text-transform: uppercase;
   color: var(--cream);
@@ -971,7 +971,7 @@ nav.bar {
 }
 .popup-mark {
   font-family: var(--display);
-  font-weight: 900;
+  font-weight: 800;
   font-size: 48px;
   letter-spacing: 0.02em;
   color: var(--cream);
