@@ -91,18 +91,25 @@ const VERT = /* glsl */ `
     float focus = spatial * uActive;
     vFocus = focus;
 
-    // ONE centred word, revealed organically: a soft ELLIPSE (no hard box)
-    // centred on screen. It shows only when the cursor hovers inside it, and
-    // the word's own tiles RISE as bright particles out of the live mosaic.
+    // ONE centred word inside a soft ellipse. While the cursor hovers in it,
+    // the whole word box dims LIGHTLY (the faded word shows through), and the
+    // tiles right under the cursor PART AWAY + dim hard — so you scratch
+    // across to uncover the word, the cursor clearing space as it goes.
     vec2 rn = center.xy / max(uRevealHalf, vec2(1e-3));
-    float region = 1.0 - smoothstep(0.7, 1.18, length(rn));        // soft ellipse
+    float region = 1.0 - smoothstep(0.7, 1.18, length(rn));        // tile in word box
     region = region * region * (3.0 - 2.0 * region);
     vec2 prn = uPointer.xy / max(uRevealHalf, vec2(1e-3));
-    float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside
-    vReveal = clamp(max(region * overCursor * (1.0 - uTransition), uBaseReveal * (1.0 - uTransition)), 0.0, 1.0);
+    float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside box
+    float inBox = region * overCursor * (1.0 - uTransition);
 
-    // flatten the whole soft ellipse so the word sits coplanar — no depth
-    // parallax, no doubling. Particles outside the ellipse stay interactive.
+    // proximity of this tile to the cursor (the local "scratch")
+    float dcur = distance(center.xy, uPointer.xy);
+    float near = 1.0 - smoothstep(0.0, uFocusRadius * 0.85, dcur);
+    near = near * near;
+
+    // light dim across the box, strong dim right under the cursor
+    vReveal = clamp(inBox * (0.4 + 0.6 * near) + uBaseReveal * (1.0 - uTransition), 0.0, 1.0);
+    float part = inBox * near;     // how much this tile parts away
     float calm = 1.0 - vReveal;
 
     // faster movement amplifies everything — flicks feel kinetic
@@ -181,6 +188,13 @@ const VERT = /* glsl */ `
     // reveal zone, so the word stays steady
     world.z += uKick * (0.18 + aSeed.x * 0.25) * calm;
 
+    // tiles part away from the cursor to clear space for the word beneath
+    vec2 awayDir = center.xy - uPointer.xy;
+    float al = length(awayDir);
+    awayDir = al > 1e-4 ? awayDir / al : vec2(0.0);
+    world.xy += awayDir * part * 1.5;     // slide aside
+    world.z -= part * 0.9;                 // and sink back, opening a gap
+
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
   }
@@ -230,9 +244,9 @@ const FRAG = /* glsl */ `
 
     // (no hover brightening — the resolve sharpens via reduced scatter only)
 
-    // soft settle of the hover zone — a dimmed patch the crisp DOM info text
-    // sits on top of (rendering text through tiles is never readable enough)
-    col = mix(col, col * 0.32, vReveal);
+    // dim the hover zone (light across the word box, dark where the tiles
+    // part under the cursor) so the DOM word reads on top
+    col = mix(col, col * 0.18, vReveal);
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;

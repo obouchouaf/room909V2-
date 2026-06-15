@@ -207,11 +207,13 @@ export class App {
     // 909 → date → venue → city. The grid dims that patch; the readable info
     // is rendered as crisp DOM text on top (see layout.setReveal).
     let inZone = false;
+    let mx = 0.5; // cursor x within the word box, 0..1
     if (!still && this.director.state === STATES.HERO) {
       const half = this.grid.uniforms.uRevealHalf.value;
       const ex = this.pointer.world.x / half.x;
       const ey = this.pointer.world.y / half.y;
       inZone = ex * ex + ey * ey < 1.0;
+      mx = Math.min(1, Math.max(0, ex * 0.5 + 0.5));
       if (inZone && !this._wasInBox) {
         this._wasInBox = true;
         this._infoIndex = (this._infoIndex + 1) % this._infos.length;
@@ -219,7 +221,7 @@ export class App {
         this._wasInBox = false;
       }
     }
-    if (this.setReveal) this.setReveal(this._infos[Math.max(0, this._infoIndex)], inZone);
+    if (this.setReveal) this.setReveal(this._infos[Math.max(0, this._infoIndex)], inZone, mx);
 
     // idle 909 attract — eligible only on HERO with no recent interaction
     const interacting =

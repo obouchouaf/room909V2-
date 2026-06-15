@@ -215,6 +215,15 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
  */
 function makeReveal(el, hint) {
   const GLYPHS = '0123456789ABCDEFGHJKLMNPRSTUWXYZ#%·';
+  const base = document.createElement('span');
+  base.className = 'rt-base';
+  const bright = document.createElement('span');
+  bright.className = 'rt-bright';
+  el.append(base, bright);
+  const setText = (s) => {
+    base.textContent = s;
+    bright.textContent = s;
+  };
   let shown = false;
   let cur = '';
   let raf = 0;
@@ -226,7 +235,7 @@ function makeReveal(el, hint) {
     const dur = 420;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduced) {
-      el.textContent = target;
+      setText(target);
       return;
     }
     const step = (now) => {
@@ -239,14 +248,15 @@ function makeReveal(el, hint) {
         else if (i < locked) out += ch;
         else out += GLYPHS[(Math.random() * GLYPHS.length) | 0];
       }
-      el.textContent = out;
+      setText(out);
       if (p < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
   };
 
-  return (text, show) => {
+  return (text, show, mx = 0.5) => {
     if (show) {
+      el.style.setProperty('--mx', `${(mx * 100).toFixed(1)}%`);
       if (!discovered && hint) {
         discovered = true;
         hint.classList.add('gone');
