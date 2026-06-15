@@ -15,8 +15,7 @@ const CONTENT = {
       ['Venue', 'Le Charleston · Historic Cabaret'],
       ['Location', 'Marrakech'],
       ['Sound', 'VOID Acoustics · Full Range'],
-      ['Production', 'Lighting · Full Stage Build'],
-      ['Format', 'Analog · 808 In The Room']
+      ['Production', 'Lighting · Full Stage Build']
     ],
     cta: ['Get Tickets', 'https://shotgun.live/'] // TODO: real ticket link
   },
@@ -126,9 +125,9 @@ function makeMosaic(seedStr, initials, cols = 16, rows = 10) {
  * tiles resolve in, breathe with a subtle idle shimmer, and respond to the
  * cursor exactly like the home-page grid — clean image, live particles.
  */
-const PORTRAIT_COLS = 104;
-const PORTRAIT_ROWS = 66;
-const PORTRAIT_CELL = 10;
+const PORTRAIT_COLS = 86;
+const PORTRAIT_ROWS = 108;
+const PORTRAIT_CELL = 9;
 
 // luminance 0..1 → an interpolated point along the brand ramp
 const PORTRAIT_RAMP = [

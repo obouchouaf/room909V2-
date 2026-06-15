@@ -102,7 +102,7 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
   prompt.className = 'prompt';
   prompt.innerHTML =
     '<span class="q">What brings you here?</span>' +
-    '<span class="hint">— scratch the centre · pick a room below —</span>';
+    '<span class="hint">— scratch the centre —</span>';
 
   // ---- centred reveal text (crisp, resolves char-by-char on hover) ----
   const reveal = document.createElement('div');
