@@ -216,11 +216,18 @@ export class App {
       if (inZone && !this._wasInBox) {
         this._wasInBox = true;
         this._infoIndex = (this._infoIndex + 1) % this._infos.length;
+        this._revealProgress = 0; // a new word starts hidden and builds up
       } else if (!inZone) {
         this._wasInBox = false;
       }
     }
-    if (this.setReveal) this.setReveal(this._infos[Math.max(0, this._infoIndex)], inZone);
+    // the word builds up over the hover (~0.9s to fully revealed) and holds
+    // while the cursor stays; it eases back when the cursor leaves the zone.
+    this._revealProgress = inZone
+      ? Math.min(1, this._revealProgress + dt / 0.9)
+      : Math.max(0, this._revealProgress - dt / 0.4);
+    if (this.setReveal)
+      this.setReveal(this._infos[Math.max(0, this._infoIndex)], inZone, this._revealProgress);
 
     // idle 909 attract — eligible only on HERO with no recent interaction
     const interacting =
@@ -249,7 +256,8 @@ export class App {
       active: still ? 0 : this.pointer.strength,
       velocity: still ? 0 : this.pointer.velocity,
       attract: this.attract.value,
-      attractPulse: this.attract.pulse
+      attractPulse: this.attract.pulse,
+      revealAmount: this._revealProgress
     });
     this.cameraRig.update(this.pointer.parallax, this.reduced ? 1 : Math.min(1, dt * 3), this._transition);
 

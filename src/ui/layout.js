@@ -209,73 +209,126 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
 }
 
 /**
- * The centred reveal text. The word lives UNDER the tiles: it is masked to a
- * circular window that tracks the REAL cursor, so it's only visible where the
- * cursor's "magnetic field" has cleared the tiles — it reads as emerging from
- * beneath the mosaic. Returns setReveal(text, show).
+ * The centred reveal. The word lives UNDER the tiles and is rendered on a
+ * canvas that you "scratch" open: the cursor paints a soft circle into an
+ * accumulation mask, so wherever you hover builds up to fully revealed and
+ * STAYS revealed while you're in the zone. The tiles are physically pushed
+ * aside by the shader (no opacity). Returns setReveal(text, show).
  */
 function makeReveal(el, hint) {
-  const GLYPHS = '0123456789ABCDEFGHJKLMNPRSTUWXYZ#%·';
-  const setText = (s) => {
-    el.textContent = s;
-  };
-  let shown = false;
-  let cur = '';
-  let raf = 0;
-  let discovered = false;
+  const GLYPHS = '0123456789ABCDEFGHJKLMNPRSTUWXYZ#%';
+  const W = 1280;
+  const H = 240;
+  const view = document.createElement('canvas');
+  view.width = W;
+  view.height = H;
+  el.appendChild(view);
+  const ctx = view.getContext('2d');
+  const maskC = document.createElement('canvas');
+  maskC.width = W;
+  maskC.height = H;
+  const mctx = maskC.getContext('2d');
 
-  // the mask circle follows the cursor in the text element's own coordinates
+  let word = '808';
+  let display = '808';
+  let scrambleStart = -9999;
+  let shown = false;
+  let discovered = false;
+  let prog = 0; // 0..1 build-up, driven from App (matches the tile clearing)
+  let cx = -999;
+  let cy = -999;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   window.addEventListener(
     'pointermove',
     (e) => {
-      if (!shown || e.pointerType === 'touch') return;
-      const r = el.getBoundingClientRect();
-      el.style.setProperty('--cx', `${(e.clientX - r.left).toFixed(0)}px`);
-      el.style.setProperty('--cy', `${(e.clientY - r.top).toFixed(0)}px`);
+      if (e.pointerType === 'touch') return;
+      const r = view.getBoundingClientRect();
+      cx = ((e.clientX - r.left) / r.width) * W;
+      cy = ((e.clientY - r.top) / r.height) * H;
     },
     { passive: true }
   );
 
-  const scrambleTo = (target) => {
-    cancelAnimationFrame(raf);
-    const start = performance.now();
-    const dur = 420;
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) {
-      setText(target);
-      return;
+  const setFont = (text) => {
+    let size = H * 0.74;
+    ctx.font = `800 ${size}px 'Martian Mono','Space Mono',monospace`;
+    while (ctx.measureText(text).width > W * 0.92 && size > 20) {
+      size -= 6;
+      ctx.font = `800 ${size}px 'Martian Mono','Space Mono',monospace`;
     }
-    const step = (now) => {
-      const p = Math.min(1, (now - start) / dur);
-      const locked = p * target.length;
-      let out = '';
-      for (let i = 0; i < target.length; i++) {
-        const ch = target[i];
-        if (ch === ' ') out += ' ';
-        else if (i < locked) out += ch;
-        else out += GLYPHS[(Math.random() * GLYPHS.length) | 0];
-      }
-      setText(out);
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
   };
 
-  return (text, show) => {
+  const loop = (now) => {
+    requestAnimationFrame(loop);
+
+    // scramble the word for ~0.4s after it changes
+    if (!reduced && now - scrambleStart < 420) {
+      const p = (now - scrambleStart) / 420;
+      const locked = p * word.length;
+      let out = '';
+      for (let i = 0; i < word.length; i++) {
+        const ch = word[i];
+        out += ch === ' ' ? ' ' : i < locked ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      }
+      display = out;
+    } else {
+      display = word;
+    }
+
+    // rebuild the scratch mask from the live progress. The whole word lifts in
+    // with `prog` (matching the tiles parting), and the cursor adds a brighter
+    // leading edge so it reads as scratched open from where you hover outward.
+    mctx.globalCompositeOperation = 'source-over';
+    mctx.clearRect(0, 0, W, H);
+    if (reduced) {
+      mctx.fillStyle = '#000';
+      mctx.fillRect(0, 0, W, H);
+    } else {
+      if (prog > 0.001) {
+        mctx.fillStyle = `rgba(0,0,0,${Math.min(1, prog).toFixed(3)})`;
+        mctx.fillRect(0, 0, W, H);
+      }
+      if (shown && cx > -900) {
+        const rad = H * 0.72;
+        const g = mctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        g.addColorStop(0, 'rgba(0,0,0,1)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        mctx.fillStyle = g;
+        mctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    // draw the word, then keep only the scratched-open area
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#efe9dc';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    setFont(display);
+    ctx.fillText(display, W / 2, H / 2 + 6);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(maskC, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+  };
+  requestAnimationFrame(loop);
+
+  return (text, show, progress = 0) => {
+    prog = progress;
     if (show) {
       if (!discovered && hint) {
         discovered = true;
         hint.classList.add('gone');
       }
-      if (!shown || cur !== text) {
+      if (word !== text) {
+        word = text;
+        scrambleStart = performance.now();
+      }
+      if (!shown) {
         shown = true;
-        cur = text;
         el.classList.add('show');
-        scrambleTo(text);
       }
     } else if (shown) {
       shown = false;
-      cur = '';
       el.classList.remove('show');
     }
   };

@@ -35,6 +35,7 @@ const VERT = /* glsl */ `
   uniform float uActive;       // pointer activity 0..1 (decays when idle)
   uniform float uVelocity;     // smoothed pointer speed 0..1 (amplifies all)
   uniform float uBaseReveal;   // reveal floor for reduced motion
+  uniform float uRevealAmount; // 0..1 how far the word has built up on hover
   uniform vec2  uCellSize;     // (1/cols, 1/rows) in texture UV
   uniform vec2  uRevealHalf;   // half-size (world) of the centred reveal zone
   uniform float uReduced;
@@ -100,16 +101,20 @@ const VERT = /* glsl */ `
     region = region * region * (3.0 - 2.0 * region);
     vec2 prn = uPointer.xy / max(uRevealHalf, vec2(1e-3));
     float overCursor = 1.0 - smoothstep(0.6, 1.3, length(prn));    // cursor inside box
-    float inBox = region * overCursor * (1.0 - uTransition);
 
     // the cursor's MAGNETIC FIELD: a circle around the pointer where the tiles
-    // are cleared and the word underneath shows through
+    // are cleared first — the leading edge of the reveal that scratches open.
     float dcur = distance(center.xy, uPointer.xy);
     float field = 1.0 - smoothstep(0.0, uFocusRadius * 0.62, dcur);
     field = field * field;
 
-    vReveal = clamp(inBox * field + uBaseReveal * (1.0 - uTransition), 0.0, 1.0);
-    float part = inBox * field;    // how much this tile is pushed out of the field
+    // how cleared this tile is: the cursor's field opens it locally, while the
+    // built-up hover amount (uRevealAmount, 0..1) lifts the WHOLE word region
+    // over ~0.9s and holds it open. Whichever is stronger wins, so the word
+    // emerges from the cursor outward and stays once fully built.
+    float clear = max(field * overCursor, uRevealAmount);
+    float part = region * (1.0 - uTransition) * clear;
+    vReveal = clamp(part + uBaseReveal * (1.0 - uTransition), 0.0, 1.0);
     float calm = 1.0 - vReveal;
 
     // faster movement amplifies everything — flicks feel kinetic
@@ -188,13 +193,14 @@ const VERT = /* glsl */ `
     // reveal zone, so the word stays steady
     world.z += uKick * (0.18 + aSeed.x * 0.25) * calm;
 
-    // the magnetic field repels the tiles out of its circle, opening a clear
-    // gap for the word beneath
-    vec2 awayDir = center.xy - uPointer.xy;
+    // the magnetic field physically repels the tiles out of its circle (no
+    // fade — they move), opening a clear gap for the word beneath. A per-tile
+    // jitter keeps even the dead-centre tile moving.
+    vec2 awayDir = (center.xy - uPointer.xy) + (aSeed.xy - 0.5) * 0.6;
     float al = length(awayDir);
     awayDir = al > 1e-4 ? awayDir / al : vec2(0.0);
-    world.xy += awayDir * part * 2.7;     // pushed aside
-    world.z -= part * 1.3;                 // and sunk back, opening a gap
+    world.xy += awayDir * part * 3.4;     // shoved aside
+    world.z -= part * 1.8;                 // and sunk back, opening a gap
 
     vDepth = world.z;
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -245,9 +251,8 @@ const FRAG = /* glsl */ `
 
     // (no hover brightening — the resolve sharpens via reduced scatter only)
 
-    // dim the hover zone (light across the word box, dark where the tiles
-    // part under the cursor) so the DOM word reads on top
-    col = mix(col, col * 0.18, vReveal);
+    // (no opacity on tiles — the word's gap is opened by physically pushing
+    // the tiles aside, not by fading them)
 
     // sequencer emissive flash — this is what bloom catches
     col += uEmber * vPulse * 0.6;
@@ -295,6 +300,7 @@ export class TileGrid {
       uActive: { value: 0 },
       uVelocity: { value: 0 },
       uBaseReveal: { value: reduced ? 0.28 : 0 },
+      uRevealAmount: { value: 0 },
       uCellSize: { value: new THREE.Vector2(0.05, 0.05) },
       uRevealHalf: { value: new THREE.Vector2(5, 2) },
       uAttract: { value: 0 },
@@ -406,6 +412,7 @@ export class TileGrid {
     u.uVelocity.value = opts.velocity;
     u.uAttract.value = opts.attract;
     u.uAttractPulse.value = opts.attractPulse;
+    u.uRevealAmount.value = opts.revealAmount || 0;
   }
 
   dispose() {
