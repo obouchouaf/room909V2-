@@ -215,14 +215,8 @@ export function buildLayout(root, director, { onGyro, onEnter, audio, onToggleMo
  */
 function makeReveal(el, hint) {
   const GLYPHS = '0123456789ABCDEFGHJKLMNPRSTUWXYZ#%·';
-  const base = document.createElement('span');
-  base.className = 'rt-base';
-  const bright = document.createElement('span');
-  bright.className = 'rt-bright';
-  el.append(base, bright);
   const setText = (s) => {
-    base.textContent = s;
-    bright.textContent = s;
+    el.textContent = s;
   };
   let shown = false;
   let cur = '';
@@ -254,9 +248,11 @@ function makeReveal(el, hint) {
     raf = requestAnimationFrame(step);
   };
 
-  return (text, show, mx = 0.5) => {
+  return (text, show, mx = 0.5, prog = 0) => {
     if (show) {
       el.style.setProperty('--mx', `${(mx * 100).toFixed(1)}%`);
+      // the cleared window grows the longer you hover (10% → 64% half-width)
+      el.style.setProperty('--rw', `${(10 + prog * 54).toFixed(1)}%`);
       if (!discovered && hint) {
         discovered = true;
         hint.classList.add('gone');

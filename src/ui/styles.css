@@ -572,12 +572,15 @@ nav.bar {
   color: var(--charcoal);
 }
 
-/* ---- centred reveal text — faded word + a bright spotlight that follows
-   the cursor (--mx), so you scratch across to read the whole word ---- */
+/* ---- centred reveal text — the word lives UNDER the tiles; only the area
+   the cursor has cleared (a window at --mx that grows with hover, --rw) is
+   uncovered, so it reads as emerging from beneath the mosaic ---- */
 .reveal-text {
   position: fixed;
   top: 50%;
   left: 50%;
+  --mx: 50%;
+  --rw: 12%;
   transform: translate(-50%, -50%) scale(0.96);
   z-index: 15;
   pointer-events: none;
@@ -587,41 +590,28 @@ nav.bar {
   letter-spacing: 0.01em;
   text-transform: uppercase;
   white-space: nowrap;
+  color: var(--cream);
+  text-shadow: 0 0 22px rgba(20, 18, 16, 0.95), 0 2px 8px rgba(0, 0, 0, 0.85);
   opacity: 0;
-  transition: opacity 0.28s var(--ease), transform 0.35s var(--ease);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent calc(var(--mx) - var(--rw)),
+    #000 calc(var(--mx) - var(--rw) + 7%),
+    #000 calc(var(--mx) + var(--rw) - 7%),
+    transparent calc(var(--mx) + var(--rw))
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent calc(var(--mx) - var(--rw)),
+    #000 calc(var(--mx) - var(--rw) + 7%),
+    #000 calc(var(--mx) + var(--rw) - 7%),
+    transparent calc(var(--mx) + var(--rw))
+  );
+  transition: opacity 0.3s var(--ease), transform 0.35s var(--ease);
 }
 .reveal-text.show {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
-}
-.reveal-text span {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
-}
-.rt-base {
-  color: rgba(239, 233, 220, 0.24);
-  text-shadow: 0 0 16px rgba(20, 18, 16, 0.9);
-}
-.rt-bright {
-  color: var(--cream);
-  text-shadow: 0 0 26px rgba(20, 18, 16, 0.95), 0 0 30px rgba(255, 92, 0, 0.25);
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent calc(var(--mx, 50%) - 16%),
-    #000 calc(var(--mx, 50%) - 4%),
-    #000 calc(var(--mx, 50%) + 4%),
-    transparent calc(var(--mx, 50%) + 16%)
-  );
-  mask-image: linear-gradient(
-    90deg,
-    transparent calc(var(--mx, 50%) - 16%),
-    #000 calc(var(--mx, 50%) - 4%),
-    #000 calc(var(--mx, 50%) + 4%),
-    transparent calc(var(--mx, 50%) + 16%)
-  );
 }
 /* faint marker showing where to hover, fades once discovered / in a section */
 .reveal-hint {

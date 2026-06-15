@@ -111,6 +111,7 @@ export class App {
     this._infos = ['808', '12 SEP 2026', 'LE CHARLESTON', 'MARRAKECH'];
     this._infoIndex = -1; // first hover lands on 808
     this._wasInBox = false;
+    this._revealProgress = 0; // grows while hovering, resets on each new word
 
     // sequencer DOM follows the same clock
     this._litCell = 0;
@@ -217,11 +218,18 @@ export class App {
       if (inZone && !this._wasInBox) {
         this._wasInBox = true;
         this._infoIndex = (this._infoIndex + 1) % this._infos.length;
+        this._revealProgress = 0; // new word starts hidden, scratch it open
       } else if (!inZone) {
         this._wasInBox = false;
       }
     }
-    if (this.setReveal) this.setReveal(this._infos[Math.max(0, this._infoIndex)], inZone, mx);
+    // the reveal window grows while hovering in the zone, recedes when you leave
+    this._revealProgress = inZone
+      ? Math.min(1, this._revealProgress + dt / 1.4)
+      : Math.max(0, this._revealProgress - dt / 0.5);
+    if (this.setReveal) {
+      this.setReveal(this._infos[Math.max(0, this._infoIndex)], inZone, mx, this._revealProgress);
+    }
 
     // idle 909 attract — eligible only on HERO with no recent interaction
     const interacting =
