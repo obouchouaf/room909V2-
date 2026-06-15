@@ -42,10 +42,13 @@ export function initCursor() {
   window.addEventListener('pointerup', () => el.classList.remove('down'));
   // keep working through fullscreen transitions — re-host in the fullscreen
   // element so the knob is never orphaned outside the fullscreen layer
-  document.addEventListener('fullscreenchange', () => {
-    const fs = document.fullscreenElement;
+  const rehost = () => {
+    const fs = document.fullscreenElement || document.webkitFullscreenElement;
     (fs || document.body).appendChild(el);
-  });
+    el.classList.add('show');
+  };
+  document.addEventListener('fullscreenchange', rehost);
+  document.addEventListener('webkitfullscreenchange', rehost);
 
   // lock onto interactive targets
   const interactive = 'a, button, .bar-item, .lineup-name, .cta, .tickets, .stage-arrow, .rc-link, .meta-row';
@@ -58,22 +61,28 @@ export function initCursor() {
 
   const scale = el.querySelector('.cursor-scale');
   let kick = 0;
+  let down = 0; // downbeat thunk 1 -> 0
 
   const loop = (now) => {
     cx += (tx - cx) * 0.28;
     cy += (ty - cy) * 0.28;
     el.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
-    // gentle idle breathing + a punch on each detected kick (driven by the App)
+    // gentle idle breathing + a punch on each detected kick, with a bigger
+    // "thunk" on the downbeat (driven by the App) so the knob rides the bar
     const idle = 0.95 + 0.04 * Math.sin(now * 0.004);
-    scale.style.transform = `scale(${(idle + kick * 0.24).toFixed(3)})`;
+    scale.style.transform = `scale(${(idle + kick * 0.22 + down * 0.34).toFixed(3)})`;
+    el.classList.toggle('beat', down > 0.5);
+    down *= 0.86;
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
 
-  // the App feeds the real detected kick here so the knob pulses on the beat
+  // the App feeds the real detected kick + downbeat here so the knob pulses
+  // on the beat and thunks on the bar
   return {
-    pulse: (k) => {
+    pulse: (k, d) => {
       kick = k || 0;
+      if (d) down = 1;
     }
   };
 }

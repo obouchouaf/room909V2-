@@ -33,13 +33,15 @@ export class CameraRig {
 
   /** parallax: THREE.Vector2 in [-1,1]; damp in [0,1]. */
   update(parallax, damp, transition) {
-    // section view pulls the camera back a touch for breathing room
-    const dist = this.distance * (1 + transition * 0.06);
+    // section view dollies the camera back and lifts it a touch, so opening a
+    // section reads as rising up and away from the grid (it recedes into a
+    // dim cloud below), not a flat content swap.
+    const dist = this.distance * (1 + transition * 0.14);
     const ax = parallax.x * MAX_ANGLE;
     const ay = parallax.y * MAX_ANGLE;
 
     const tx = Math.sin(ax) * dist;
-    const ty = Math.sin(ay) * dist;
+    const ty = Math.sin(ay) * dist + transition * 1.1;
     const tz = Math.cos(ax) * Math.cos(ay) * dist;
 
     this.camera.position.x += (tx - this.camera.position.x) * damp;

@@ -115,10 +115,12 @@ export class App {
 
     // sequencer DOM follows the same clock
     this._litCell = 0;
+    this._downbeatPulse = false;
     this.clock.onStep((step) => {
       this.cells[this._litCell].classList.remove('on');
       this.cells[step].classList.add('on');
       this._litCell = step;
+      if (step % 4 === 0) this._downbeatPulse = true; // bar accents → cursor thunk
     });
     if (this.reduced) this.cells[0].classList.add('on');
 
@@ -263,7 +265,8 @@ export class App {
 
     // live audio UI: VU meter + cursor knob pulse (always, even when paused)
     if (this.setMeter) this.setMeter(this.audio.level, this.audio.kick);
-    if (this.cursorPulse) this.cursorPulse(this.reduced ? 0 : this.audio.kick);
+    if (this.cursorPulse) this.cursorPulse(this.reduced ? 0 : this.audio.kick, this._downbeatPulse && !still);
+    this._downbeatPulse = false;
 
     // render
     this.composer.render(time);

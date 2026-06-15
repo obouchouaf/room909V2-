@@ -166,6 +166,12 @@ canvas#gl {
 .cursor.down .knob {
   box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 92, 0, 0.5);
 }
+/* downbeat thunk: the ember collar flares on the bar so the knob rides the
+   rhythm (paired with the scale punch driven from JS) */
+.cursor.beat .knob {
+  border-color: #ffd9b0;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 92, 0, 0.85);
+}
 /* lock onto a target: knob grows, pointer turns, collar brightens */
 .cursor.lock {
   width: 42px;
@@ -664,6 +670,108 @@ nav.bar {
 .ui[data-mode='section'] .prompt {
   opacity: 0;
   pointer-events: none;
+}
+
+/* ---- sound invitation — the experience is beat-synced; opt in here ---- */
+.sound-invite {
+  position: fixed;
+  top: 98px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 92, 0, 0.5);
+  border-radius: 999px;
+  background: rgba(20, 18, 16, 0.55);
+  backdrop-filter: blur(8px);
+  color: var(--cream);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  animation: soundPulse 2.4s ease-in-out infinite;
+  transition: opacity 0.4s var(--ease), transform 0.2s var(--ease),
+    border-color 0.2s var(--ease);
+}
+.sound-invite .si-ico {
+  color: var(--ember);
+  font-size: 9px;
+}
+.sound-invite:hover,
+.sound-invite:focus-visible {
+  border-color: var(--ember);
+  transform: translateX(-50%) translateY(-1px);
+}
+.sound-invite.gone,
+.ui[data-mode='section'] .sound-invite {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes soundPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 92, 0, 0);
+  }
+  50% {
+    box-shadow: 0 0 18px 0 rgba(255, 92, 0, 0.35);
+  }
+}
+
+/* ---- hero swipe / scroll cue — sections live above and below ---- */
+.hero-cue {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  z-index: 12;
+  pointer-events: none;
+  transition: opacity 0.5s var(--ease);
+}
+.hc-label {
+  writing-mode: vertical-rl;
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.hc-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.hc-arrows i {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--ember);
+  border-bottom: 1.5px solid var(--ember);
+  transform: rotate(45deg);
+  opacity: 0.2;
+  animation: cueArrow 1.6s ease-in-out infinite;
+}
+.hc-arrows i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.hc-arrows i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes cueArrow {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+.hero-cue.gone,
+.ui[data-mode='section'] .hero-cue {
+  opacity: 0;
 }
 
 /* ---- GET TICKETS — the single boldest CTA: solid ember ---- */
@@ -1176,6 +1284,16 @@ nav.bar {
   .stage-bio {
     max-width: none;
   }
+  /* keep the sound invite clear of the prompt; tuck the cue to the edge */
+  .sound-invite {
+    top: 104px;
+    font-size: 9px;
+    padding: 7px 13px;
+    letter-spacing: 0.16em;
+  }
+  .hero-cue {
+    right: 12px;
+  }
 }
 
 /* ---- reduced motion ---- */
@@ -1204,6 +1322,13 @@ nav.bar {
   .reveal-hint {
     animation: none !important;
     transform: translate(-50%, -50%) !important;
+  }
+  .sound-invite,
+  .hc-arrows i {
+    animation: none !important;
+  }
+  .hc-arrows i {
+    opacity: 0.5 !important;
   }
   #boot {
     animation: none !important;
